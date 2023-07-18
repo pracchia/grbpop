@@ -1,6 +1,7 @@
 # grbpop
 
 Python code used for the modelling of the population of short GRBs in Salafia et al. 2023 (https://arxiv.org/abs/2306.15488). Please cite the paper if you use this code.
+The MCMC chains obtained with this code and used to produce the plots in Salafia et al. 2023 are stored at Zenodo: https://zenodo.org/record/8160783
 
 ## Dependencies
 The `grbpop` module is written in python 3 and depends on the following packages:
