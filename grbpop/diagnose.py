@@ -183,3 +183,56 @@ def core_L_Ep_contours_and_cumulatives(theta_pop=Ppop.default_theta_pop,res=100,
     cum_Ep/=cum_Ep[-1]
     
     return L,Ep,PEpL_core_contours,cum_L,cum_Ep
+
+def viewing_angle_distribution(theta_pop=Ppop.default_theta_pop,pflim=0.01,inst='Fermi',alpha=-0.5,specmodel='Comp',pdet='gbm',res=100):
+    L = np.logspace(logLmin,logLmax,res+1)
+    Ep = np.logspace(logEpmin,logEpmax,res+2)
+    z = np.logspace(logzmin,logzmax,res-1)
+    
+    zg = z.reshape([1,1,len(z)])
+    Epg = Ep.reshape([len(Ep),1,1])
+    Lg = L.reshape([1,len(L),1])
+    
+    if pdet=='gbm':
+        pdet = pdet_GBM
+    
+    if pdet is None:
+        if inst=='Fermi+Swift':
+            pf_EpLz_fe = pflux.pflux_from_L(zg,Epg,Lg,alpha=alpha,model=specmodel,inst='Fermi')
+            ep_EpLz = Epg/(1.+zg)
+            pf_EpLz_sw = pflux.pflux_from_L(zg,Epg,Lg,alpha=alpha,model=specmodel,inst='Swift')
+            Pdet = (pf_EpLz_fe>=pflim[0])*(pf_EpLz_sw>=pflim[1])
+        else:
+            pf_EpLz = pflux.pflux_from_L(zg,Epg,Lg,alpha=alpha,model=specmodel,inst=inst)
+            Pdet = (pf_EpLz>pflim)
+    else:
+        if inst=='Fermi+Swift':
+            pf_EpLz_fe = pflux.pflux_from_L(zg,Epg,Lg,alpha=alpha,model=specmodel,inst='Fermi')
+            ep_EpLz = Epg/(1.+zg)
+            pf_EpLz_sw = pflux.pflux_from_L(zg,Epg,Lg,alpha=alpha,model=specmodel,inst='Swift')
+            Pdet = pdet(pf_EpLz_fe,ep_EpLz)*(pf_EpLz_sw>=pflim[1])
+        elif inst=='Fermi+GW':
+            pf_EpLz = pflux.pflux_from_L(zg,Epg,Lg,alpha=alpha,model=specmodel,inst='Fermi')
+            ep_EpLz = Epg/(1.+zg)
+            PdetGRB = pdet(pf_EpLz,ep_EpLz)
+        else:
+            pf_EpLz = pflux.pflux_from_L(zg,Epg,Lg,alpha=alpha,model=specmodel,inst=inst)
+            ep_EpLz = Epg/(1.+zg)
+            Pdet = pdet(pf_EpLz,ep_EpLz)
+
+    Pz = Ppop.Pz(z,theta_pop)
+        
+    thv = np.logspace(logthvmin,np.log10(np.pi/2.),res)
+    pthv = np.zeros(len(thv))
+    
+    for i in range(len(thv)):
+        
+        PEpLthv = Ppop.PEpLthv(Lg,Epg,thv[i]*Lg**0*Epg**0,theta_pop)
+        
+        ppop_EpLz = PEpLthv*Pz.reshape([1,1,len(z)])
+        
+        pthv[i] = np.sin(thv[i])*np.trapz(np.trapz(np.trapz(ppop_EpLz*Pdet*zg*Epg*Lg,z,axis=2),L,axis=1),Ep,axis=0)
+    
+    pthv/=np.trapz(pthv,thv)
+    return thv,pthv
+    
