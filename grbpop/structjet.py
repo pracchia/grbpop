@@ -11,7 +11,6 @@ def ell(th,theta_pop):
         return np.zeros_like(th)    
     
 def eta(th,theta_pop):
-    
     if 'thc_Ep' in theta_pop.keys():
         thc = theta_pop['thc_Ep']
     else:
