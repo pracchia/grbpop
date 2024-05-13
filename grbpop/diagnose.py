@@ -145,11 +145,31 @@ def pf_ep_contours_and_cumulatives(theta_pop=Ppop.default_theta_pop,pflim=0.01,i
     
     return pf,ep,Ppfep_contours,cum_pf,cum_ep
 
-def chain_to_jet_structure(chain,theta_pop0=Ppop.default_theta_pop,chain_params=['thj','Lj','a_L','Epj','a_Ep']):
+def chain_to_jet_structure(chain,chain_params=['thc','thw','Lc*','a_L','b_L','Epc*','a_Ep','b_Ep'],theta_pop0=Ppop.default_theta_pop,res=100):
+    """
+    Produce samples of the "average" apparent jet structure Lc* ell(theta_view) and 
+    Epc* eta(theta_view) based on the hyperposterior samples cointained in a supplied 
+    chain.
+    
+    Input:
+    - chain: a hyperposterior sample chain with shape [Nsamples,Nhyperparameters]
+    - chain_params: a list containing the names of the parameters contained in the
+                    chain, with the same notation as used in the definitions of the
+                    jet structures in structjet.py
+    - theta_pop0: a dictionary that contains default values of the parameters that 
+                  are not contained in the chain (if any)
+    - res: theta_view resolution of the outputs
+    
+    Returns: thv,Lthv,Epthv
+    - thv: array of viewing angles, in radians, of length 'res'
+    - Lthv: samples of Lc* ell(thv), shape [Nsamples,res]
+    - Epthv: samples of Epc* eta(thv), shape [Nsamples,res]
+    
+    """
 
     Nsamples = chain.shape[0]
     
-    thv0 = np.logspace(logthvmin,np.log10(np.pi/2.),100)
+    thv0 = np.logspace(logthvmin,np.log10(np.pi/2.),res)
     Lthv = np.zeros([Nsamples,len(thv0)])
     Epthv = np.zeros([Nsamples,len(thv0)])
 
@@ -157,8 +177,8 @@ def chain_to_jet_structure(chain,theta_pop0=Ppop.default_theta_pop,chain_params=
         for j in range(len(chain_params)):
             theta_pop0[chain_params[j]]=chain[i,j]
         
-        Lthv[i] = structjet.tildeL(thv0,theta_pop0)
-        Epthv[i] = structjet.tildeEp(thv0,theta_pop0)
+        Lthv[i] = theta_pop0['Lc*']*structjet.ell(thv0,theta_pop0)
+        Epthv[i] = theta_pop0['Epc*']*structjet.eta(thv0,theta_pop0)
         
     return thv0,Lthv,Epthv
 
