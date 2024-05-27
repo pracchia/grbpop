@@ -67,6 +67,7 @@ def MD14_SFH(z,a,b,zp):
     """
     return (1.+z)**a/(1.+((1.+z)/(1.+zp))**(b+a))
 
+
 def Pz(z,theta_pop=default_theta_pop,normalize=True):
     """
     Returns the probability of redshift P(z | theta_pop) conditioned on the population parameters, that is, the population model

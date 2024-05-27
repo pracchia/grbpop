@@ -1,0 +1,53 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from astropy.cosmology import Planck15 as cosmo
+from scipy.interpolate import RegularGridInterpolator
+
+def MD14_SFH(z,a=2.6,b=3.6,zp=2.2):
+    return (1.+z)**a/(1.+((1.+z)/(1.+zp))**(b+a))
+
+def Ptd_pow(t, tdmin, alpha):
+    ptd = np.zeros_like(t)
+    ptd[t>tdmin] = t[t>tdmin]**(-alpha)
+    return ptd
+    # return ptd/np.trapz(ptd,t)
+
+# def Ptd_lognormal(t, td, sigma):
+#     return np.exp((np.log(t)-np.log(td))/(2*(sigma**2)))/(np.sqrt(2*np.pi)*sigma*t)
+
+z = np.logspace(-4,1,1000)
+# For power law
+at = np.linspace(0,5,50)
+tdmin = np.logspace(0,3,50) # in Myr
+# For lognormal
+td = np.logspace(1,4,50) # in Myr
+sigma = np.logspace(1,4,50) # in Myr
+
+
+r_sgrb_pow = np.zeros([len(z),len(at),len(tdmin)])
+# r_sgrb_lognormal = np.zeros([len(z),len(td),len(sigma)])
+for i in range(len(z[0:-1])):
+    # Compute quantities used for every minimum time delay and time delay distribution slope
+    print('Computing redshift distributions for z = {0:.4f} ...           '.format(z[i]),end='\r')
+    zf = z[z>z[i]] # Formation redshifts
+    sfh = MD14_SFH(zf) # Star formation history for formation redshifts
+    tlbz = cosmo.lookback_time(z[i]).to('Myr').value # Lookback time at redshift zeta in Myr
+    tlbf = cosmo.lookback_time(zf).to('Myr').value # Formation lookback times in Myr
+    dt_dr = 1/(1+zf)/cosmo.efunc(zf) # Derivative of lookback time with respect to redshift
+    for j in range(len(tdmin)):
+        for k in range(len(at)):
+            r_sgrb_pow[i][j][k] = np.trapz(sfh*Ptd_pow(tlbf-tlbz, tdmin=tdmin[j], alpha=at[k])*dt_dr/(1+zf), zf)
+
+    # for j in range(len(td)):
+    #     for k in range(len(sigma)):
+    #         r_sgrb_lognormal[i][j][k] = np.trapz(sfh*Ptd_lognormal(tlbf-tlbz, td=td[j], sigma=sigma[k])*dt_dr/(1+zf), zf)
+
+np.save('dtd_sfh_conv_tables/z.npy',z)
+
+np.save('dtd_sfh_conv_tables/at.npy',at)
+np.save('dtd_sfh_conv_tables/tdmin.npy',tdmin)
+np.save('dtd_sfh_conv_tables/r_sgrb_pow.npy',r_sgrb_pow)
+
+# np.save('dtd_sfh_conv_tables/td.npy',td)
+# np.save('dtd_sfh_conv_tables/sigma.npy',sigma)
+# np.save('dtd_sfh_conv_tables/r_sgrb_lognormal.npy',r_sgrb_lognormal)
