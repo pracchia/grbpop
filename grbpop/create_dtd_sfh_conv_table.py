@@ -26,10 +26,7 @@ b=3.6
 zp=2.2
 # For power law
 at = np.linspace(0,5,50)
-tdmin = np.logspace(0,3,50) # in Myr
-# For lognormal
-td = np.logspace(1,4,50) # in Myr
-sigma = np.logspace(1,4,50) # in Myr
+tdmin = np.logspace(-3,0,50) # in Gyr
 
 r_sgrb_pow = np.zeros([len(z),len(tdmin),len(at)])
 for i in range(len(z[0:-1])):
@@ -37,8 +34,8 @@ for i in range(len(z[0:-1])):
     print('Computing redshift distributions for z = {0:.4f} ...           '.format(z[i]),end='\r')
     zf = z[z>z[i]] # Formation redshifts
     sfh = MD14_SFH(zf,a=a,b=b,zp=zp) # Star formation history for formation redshifts
-    tlbz = cosmo.lookback_time(z[i]).to('Myr').value # Lookback time at redshift zeta in Myr
-    tlbf = cosmo.lookback_time(zf).to('Myr').value # Formation lookback times in Myr
+    tlbz = cosmo.lookback_time(z[i]).to('Gyr').value # Lookback time at redshift zeta in Gyr
+    tlbf = cosmo.lookback_time(zf).to('Gyr').value # Formation lookback times in Gyr
     dt_dr = 1/(1+zf)/cosmo.efunc(zf) # Derivative of lookback time with respect to redshift
     for j in range(len(tdmin)):
         for k in range(len(at)):

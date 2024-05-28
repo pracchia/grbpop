@@ -7,12 +7,24 @@ from .structjet import eta
 from . import pflux
 from .pdet import pdet_GBM,pdet_GW170817,pdet_GW_O4,pdet_GW_O3
 from .globals import *
+import pathlib
+here = pathlib.Path(__file__).parent.resolve()
 
 z0 = np.logspace(logzmin,logzmax,1000)
 dVdz0 = 4*np.pi*cosmo.differential_comoving_volume(z0).to('Gpc3 sr-1').value
 dL0 = cosmo.luminosity_distance(z0).to('cm').value
 
-default_theta_pop = {'jetmodel':'smooth double power law','thc':0.04,'Lc*':5e51,'a_L':4.7,'b_L':1.6,'Epc*':17.7e3,'a_Ep':1.9,'b_Ep':1.1,'thw':1.,'A':3.2,'s_c':1.,'y':-0.3,'a':4.6,'b':5.3,'zp':2.2}
+# theta_pop parameters for smoothly broken power law as redshift distribution
+# default_theta_pop = {'jetmodel':'smooth double power law','thc':0.04,'Lc*':5e51,'a_L':4.7,'b_L':1.6,'Epc*':17.7e3,'a_Ep':1.9,'b_Ep':1.1,'thw':1.,'A':3.2,'s_c':1.,'y':-0.3,'a':4.6,'b':5.3,'zp':2.2}
+default_theta_pop = {'jetmodel':'smooth double power law','rho_z':'SBPL','thc':0.04,'Lc*':5e51,'a_L':4.7,'b_L':1.6,'Epc*':17.7e3,'a_Ep':1.9,'b_Ep':1.1,'thw':1.,'A':3.2,'s_c':1.,'y':-0.3,'a':4.6,'b':5.3,'zp':2.2}
+
+# theta_pop parameters for convolution DTD-SFH as redshift distribution
+default_theta_pop = {'jetmodel':'smooth double power law','rho_z':'DTD*SFH','thc':0.04,'Lc*':5e51,'a_L':4.7,'b_L':1.6,'Epc*':17.7e3,'a_Ep':1.9,'b_Ep':1.1,'thw':1.,'A':3.2,'s_c':1.,'y':-0.3,'at':1.,'tdmin':2e-2}
+z_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/z.npy'))
+tdmin_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/tdmin.npy'))
+at_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/at.npy'))
+rhoz_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/r_sgrb_pow.npy'))
+Itp_rhoz = RegularGridInterpolator(points=(np.log10(z_grid),np.log10(tdmin_grid),at_grid),values=np.nan_to_num(rhoz_grid),bounds_error=False)
 
 
 def PEpLthv(L,Ep,thv,theta_pop=default_theta_pop):
@@ -71,17 +83,26 @@ def MD14_SFH(z,a,b,zp):
 def Pz(z,theta_pop=default_theta_pop,normalize=True):
     """
     Returns the probability of redshift P(z | theta_pop) conditioned on the population parameters, that is, the population model
-    for the intrinsic redshift distribution (as seen by an Earth observer with an infinitely sensitive instrument). The theta_pop dictionary must contain information about the redshift distribution parameters a, b and zp.
+    for the intrinsic redshift distribution (as seen by an Earth observer with an infinitely sensitive instrument). The theta_pop dictionary must contain information about the redshift distribution ('rho_z' in theta_pop) parameters, i.e. a, b and zp in the case of a Smoothly Broken Power Law ('SBPL') or at and tdmin (expressed in Gyr) in the case of a convolution between a Delayed Time Distribution and a Star Formation History ('DTD*SFH').
     
     If normalize=False, then rho(z)/R0 * 1/(1+z) * dV/dz is returned.
     """
-    a = theta_pop['a']
-    b = theta_pop['b']
-    zp = theta_pop['zp']
-    rhoz = MD14_SFH(z,a,b,zp)
-    rhoz0 = MD14_SFH(z0,a,b,zp)
-    pz = np.interp(z,z0,dVdz0)/(1.+z)*rhoz
-    pz0 = dVdz0/(1.+z0)*rhoz0
+    if theta_pop['rho_z'] == 'SBPL':
+        a = theta_pop['a']
+        b = theta_pop['b']
+        zp = theta_pop['zp']
+        rhoz = MD14_SFH(z,a,b,zp)
+        rhoz0 = MD14_SFH(z0,a,b,zp)
+        pz = np.interp(z,z0,dVdz0)/(1.+z)*rhoz
+        pz0 = dVdz0/(1.+z0)*rhoz0
+    elif theta_pop['rho_z'] == 'DTD*SFH':
+        at = theta_pop['at']
+        tdmin = theta_pop['tdmin']
+        rhoz = Itp_rhoz((np.log10(z),np.log10(at),tdmin))
+        rhoz0 = Itp_rhoz((np.log10(z0),np.log10(at),tdmin))
+        pz = np.interp(z,z0,dVdz0)/(1.+z)*rhoz
+        pz0 = dVdz0/(1.+z0)*rhoz0
+        
     if normalize:
         return pz/np.trapz(pz0,z0)
     else:
