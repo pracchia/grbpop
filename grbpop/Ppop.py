@@ -23,7 +23,7 @@ z_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/z.npy'))
 tdmin_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/tdmin.npy'))
 at_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/at.npy'))
 rhoz_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/r_sgrb_pow.npy'))
-Itp_rhoz = RegularGridInterpolator(points=(np.log10(z_grid),np.log10(tdmin_grid),at_grid),values=np.nan_to_num(rhoz_grid),bounds_error=False)
+Itp_rhoz = RegularGridInterpolator(points=(np.log10(z_grid),tdmin_grid,at_grid),values=np.nan_to_num(rhoz_grid),bounds_error=False)
 
 
 def PEpLthv(L,Ep,thv,theta_pop=default_theta_pop):
