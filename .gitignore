@@ -161,3 +161,9 @@ cython_debug/
 
 # Test jupyter notebooks
 Tests.ipynb
+
+# Computation grids
+dtd_sfh_conv_tables/z.npy
+dtd_sfh_conv_tables/at.npy
+dtd_sfh_conv_tables/tdmin.npy
+dtd_sfh_conv_tables/r_sgrb_pow.npy

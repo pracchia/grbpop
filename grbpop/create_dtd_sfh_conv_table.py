@@ -11,35 +11,30 @@ def MD14_SFH(z,a,b,zp):
     """
     return (1.+z)**a/(1.+((1.+z)/(1.+zp))**(b+a))
 
-def Ptd_pow(t, tdmin, alpha):
-    ptd = np.zeros_like(t)
-    ptd[t>tdmin] = t[t>tdmin]**(-alpha)
-    if np.trapz(ptd,t) == 0:
-        return 0
-    else:
-        return ptd/np.trapz(ptd,t)
-
-z = np.logspace(-4,1,1000)
-# For MD14_SFH (from Madau & Fragos 2017)
 a=2.6
 b=3.6
 zp=2.2
-# For power law
 at = np.linspace(0,5,50)
-tdmin = np.logspace(-3,0,50) # in Gyr
-
+td_spacing = 0.005
+td_grid = np.arange(0,cosmo.lookback_time(1000).value,td_spacing)
+zf = np.zeros_like(td_grid)
+zf[1:] = z_at_value(cosmo.lookback_time, td_grid[1:]*u.Gyr)
+tdmin = td_grid[td_grid<=1]
+tdmin = tdmin[1:]
+z = zf[zf<=10]
 r_sgrb_pow = np.zeros([len(z),len(tdmin),len(at)])
-for i in range(len(z[0:-1])):
-    # Compute quantities used for every minimum time delay and time delay distribution slope
-    print('Computing redshift distributions for z = {0:.4f} ...           '.format(z[i]),end='\r')
-    zf = z[z>z[i]] # Formation redshifts
-    sfh = MD14_SFH(zf,a=a,b=b,zp=zp) # Star formation history for formation redshifts
-    tlbz = cosmo.lookback_time(z[i]).to('Gyr').value # Lookback time at redshift zeta in Gyr
-    tlbf = cosmo.lookback_time(zf).to('Gyr').value # Formation lookback times in Gyr
-    dt_dr = 1/(1+zf)/cosmo.efunc(zf) # Derivative of lookback time with respect to redshift
-    for j in range(len(tdmin)):
-        for k in range(len(at)):
-            r_sgrb_pow[i][j][k] = np.trapz(sfh*Ptd_pow(tlbf-tlbz, tdmin=tdmin[j], alpha=at[k])*dt_dr/(1+zf), zf)
+for k in tqdm(range(len(tdmin))):
+    td_index = int(tdmin[k]/td_spacing)
+    for q in range(len(at)):
+        dtd_norm = np.trapz(td_grid[td_index:]**(-at[q]), td_grid[td_index:])
+        for i in range(len(z)):
+            zf_index = i + td_index + 1
+            td_int = td_grid[td_index:-(i+1)]
+            zf_int = zf[zf_index:]
+            dtd = td_int**(-at[q])/dtd_norm
+            sfh = MD14_SFH(zf_int,a=a,b=b,zp=zp))
+            r_sgrb_pow[i][k][q] = np.trapz(sfh*dtd/(1+zf_int), td_int)
+
 
 
 np.save('dtd_sfh_conv_tables/z.npy',z)
