@@ -16,13 +16,13 @@ def MD14_SFH(z,a,b,zp):
 a=2.6
 b=3.6
 zp=2.2
-at = np.linspace(0,5,50)
-td_spacing = 0.005
+at = np.linspace(0,3,20)
+td_spacing = 0.01
 print('Computing grid of time delays and formation redshifts...')
 td_grid = np.arange(0,cosmo.lookback_time(1000).value,td_spacing)
 zf = np.zeros_like(td_grid)
 zf[1:] = z_at_value(cosmo.lookback_time, td_grid[1:]*u.Gyr)
-tdmin = td_grid[td_grid<=1]
+tdmin = td_grid[td_grid<=0.505]
 tdmin = tdmin[1:]
 z = zf[zf<=10]
 r_sgrb_pow = np.zeros([len(z),len(tdmin),len(at)])

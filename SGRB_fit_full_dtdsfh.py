@@ -68,8 +68,8 @@ def logprior(theta_pop): ### OK
     or theta_pop['A']<1.5 or theta_pop['A']>5.\
     or theta_pop['s_c']<0.3 or theta_pop['s_c']>3.\
     or theta_pop['y']<-3. or theta_pop['y']>3.\
-    or theta_pop['at']<0. or theta_pop['at']>5.\
-    or theta_pop['tdmin']<0. or theta_pop['tdmin']>1.:
+    or theta_pop['at']<0. or theta_pop['at']>3.\
+    or theta_pop['tdmin']<0. or theta_pop['tdmin']>0.5:
         return -np.inf
     else:
         return np.log(theta_pop['thc']) + np.log(np.sin(theta_pop['thc'])) + np.log(theta_pop['thw']) + np.log(np.sin(theta_pop['thw'])) # "isotropic" prior on angles
@@ -133,7 +133,7 @@ if __name__=='__main__':
     
     # initial guess vector
     #      log(thj)  log(Lj) a_L      b_L   log(Epj) a_Ep    b_Ep  log(thw)  A       log(s_c)    y     at  tdmin    
-    x0 = [-1.877,     51.55, 4.091, -2.318, 3.804,    1.2,   2.069, -0.5058, 3.041, -0.01476, -0.1149, 1., 2e-2]  # starting guess
+    x0 = [-1.877,     51.55, 4.091, -2.318, 3.804,    1.2,   2.069, -0.5058, 3.041, -0.01476, -0.1149, 1., 0.02]  # starting guess
 
     # as a cross check
     print('Log likelihood at starting guess: ',loglike(x0))
