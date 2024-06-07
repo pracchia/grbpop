@@ -15,8 +15,8 @@ sgrb = gbm.loc[gbm['t90']<2]
 p50300 = sgrb['pflx_comp_phtfluxb'].values
 ep = sgrb['pflx_comp_epeak'].values
 
-# impose quality cuts and flux completeness cut
-clean = (ep>50.) & (ep<1e4) & (p50300>3.5) 
+# impose quality cuts
+clean = (ep>50.) & (ep<1e4) & (p50300>1.) 
 
 ep = ep[clean]
 p50300 = p50300[clean]
@@ -48,11 +48,15 @@ thvs = rng.choice(thv17,Nsamples,p=w/np.sum(w))
 # set low-energy photon index to the median of the GBM sample
 alpha=-0.4
 
+# rho_z defined to select the density evolution model
+# rho_z='SBPL' # Smoothly Broken Power Law. Parameters: theta_pop['a'] (slope before the peak), theta_pop['b'] (-slope after the peak) and theta_pop['zp'] (peak)
+# rho_z='DTD*SFH' # convolution between a Delay Time Distribution and a Star Formation History. Parameters: theta_pop['at'] (slope) and theta_pop['tdmin'] (minimum merger time in Gyr)
 
-def logprior(theta_pop):
+def logprior(theta_pop): ### OK
     """
     log prior 
     """
+    
     if theta_pop['thc']<0.01 or theta_pop['thc']>(np.pi/2.)\
     or theta_pop['Lc*']<3e51 or theta_pop['Lc*']>1e55\
     or theta_pop['Epc*']<1e2 or theta_pop['Epc*']>1e5\
@@ -64,21 +68,20 @@ def logprior(theta_pop):
     or theta_pop['A']<1.5 or theta_pop['A']>5.\
     or theta_pop['s_c']<0.3 or theta_pop['s_c']>3.\
     or theta_pop['y']<-3. or theta_pop['y']>3.\
-    or theta_pop['a']<-1. or theta_pop['a']>5.\
-    or theta_pop['b']<1. or theta_pop['b']>10.\
-    or theta_pop['zp']<0.1 or theta_pop['zp']>3.:
+    or theta_pop['at']<0. or theta_pop['at']>5.\
+    or theta_pop['tdmin']<0. or theta_pop['tdmin']>1.:
         return -np.inf
     else:
         return np.log(theta_pop['thc']) + np.log(np.sin(theta_pop['thc'])) + np.log(theta_pop['thw']) + np.log(np.sin(theta_pop['thw'])) # "isotropic" prior on angles
 
-
-def loglike(x):
+def loglike(x): ### OK
     """
     log likelihood
     """
     
     # smooth double power law jet model
     theta_pop = {'jetmodel':'smooth double power law',
+             'rho_z':'DTD*SFH',
              'thc':10**x[0],
              'Lc*':10.**x[1],
              'a_L':x[2],
@@ -90,13 +93,12 @@ def loglike(x):
              'A':x[8],
              's_c':10.**x[9],
              'y':x[10],
-             'a':x[11],
-             'b':x[12],
-             'zp':x[13]
+             'at':x[11],
+             'tdmin':x[12]
              }
     
     pi_EpLz = lambda Epx,Lx,zx:Lx**-1*(1.+zx)**-1 # Ep,L,z prior from spectral analysis
-    pdet = lambda pf,ep: (pf>3.5)*(ep<1e4)*(ep>50.) # detection probability for flux-limited sample analysis
+    pdet = lambda pf,ep: pdet_GBM(pf,ep)*(pf>1.)*(ep<1e4)*(ep>50.) # detection probability for full sample analysis
     
     # evaluate log prior
     lpr = logprior(theta_pop)
@@ -107,13 +109,13 @@ def loglike(x):
     # evaluate log likelihood
     
     ## observer frame sample
-    logl_obsframe = grbpop.Ppop.obsframe_loglikelihood(p50300,ep,alpha=alpha,specmodel='Comp',inst='Fermi',theta_pop=theta_pop,res=80,pdet=pdet,pflim=3.5,return_logalpha=False)
+    logl_obsframe = grbpop.Ppop.obsframe_loglikelihood(p50300,ep,alpha=alpha,specmodel='Comp',inst='Fermi',theta_pop=theta_pop,res=80,pdet=pdet,pflim=None,return_logalpha=False)
     
     ## restframe sample
-    logl_restframe = grbpop.Ppop.restframe_loglikelihood(Lsamples[:-1],Epsamples[:-1],zobs[:-1],alpha=alpha,inst='Fermi+Swift',theta_pop=theta_pop,specmodel='Comp',pdet=None,pflim=[3.5,3.5],prior_EpLz=pi_EpLz,logalpha=None,res=60)
+    logl_restframe = grbpop.Ppop.restframe_loglikelihood(Lsamples[:-1],Epsamples[:-1],zobs[:-1],alpha=alpha,inst='Fermi+Swift',theta_pop=theta_pop,specmodel='Comp',pdet='gbm',pflim=[None,3.5],prior_EpLz=pi_EpLz,logalpha=None,res=60)
     
-    ## viewing angle sample (this is actually a prior in the flux-limited sample analysis, see sec 2.5.3 in Salafia+2023 
-    logl_GW170817 = grbpop.Ppop.known_theta_view_loglikelihood(Lsamples[-1],Epsamples[-1],thvs,theta_pop,prior_EpLz=pi_EpLz)
+    ## viewing angle sample
+    logl_GW170817 = grbpop.Ppop.known_theta_view_loglikelihood(Lsamples[-1],Epsamples[-1],thvs,theta_pop,prior_EpLz=pi_EpLz) + np.log(grbpop.Ppop.Pz(zobs[-1][0],theta_pop=theta_pop))-grbpop.Ppop.logalpha_GRB_GW(theta_pop,pdet_GW='O3')
     
     ## sum all contributions
     logl = logl_obsframe + logl_restframe + logl_GW170817
@@ -127,12 +129,12 @@ def loglike(x):
 if __name__=='__main__':
     nthreads = 8
     N_iter = 10000
-    chain_filename = 'chains/SGRB_flux-limited-sample-analysis.h5' # full
+    chain_filename = 'chains/SGRB_full-sample-analysis_dtdsfh.h5' # full
     
     # initial guess vector
-    #      log(thj)  log(Lj) a_L      b_L   log(Epj) a_Ep    b_Ep  log(thw)  A       log(s_c)   y       a      b      zp    
-    x0 = [-1.877,     51.55, 4.091, -2.318, 3.804,    1.2,   2.069, -0.5058, 3.041, -0.01476, -0.1149, 4.431, 4.623, 2.051]  # starting guess
-    
+    #      log(thj)  log(Lj) a_L      b_L   log(Epj) a_Ep    b_Ep  log(thw)  A       log(s_c)    y     at  tdmin    
+    x0 = [-1.877,     51.55, 4.091, -2.318, 3.804,    1.2,   2.069, -0.5058, 3.041, -0.01476, -0.1149, 1., 2e-2]  # starting guess
+
     # as a cross check
     print('Log likelihood at starting guess: ',loglike(x0))
     

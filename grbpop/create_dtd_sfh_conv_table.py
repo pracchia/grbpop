@@ -40,7 +40,7 @@ for k in tqdm(range(len(tdmin))):
             r_sgrb_pow[i][k][q] = np.trapz(sfh*dtd/(1+zf_int), td_int)
 
 
-print('Saving grids')
+print('Saving grids...')
 
 np.save('dtd_sfh_conv_tables/z.npy',z)
 
