@@ -8,6 +8,7 @@ from . import pflux
 from .pdet import pdet_GBM,pdet_GW170817,pdet_GW_O4,pdet_GW_O3
 from .globals import *
 import pathlib
+import os
 here = pathlib.Path(__file__).parent.resolve()
 
 z0 = np.logspace(logzmin,logzmax,1000)
@@ -105,8 +106,8 @@ def Pz(z,theta_pop=default_theta_pop,normalize=True):
     elif theta_pop['rho_z'] == 'DTD*SFH':
         at = theta_pop['at']
         tdmin = theta_pop['tdmin']
-        rhoz = Itp_rhoz((np.log10(z),np.log10(at),tdmin))
-        rhoz0 = Itp_rhoz((np.log10(z0),np.log10(at),tdmin))
+        rhoz = Itp_rhoz((np.log10(z),tdmin,at))
+        rhoz0 = Itp_rhoz((np.log10(z0),tdmin,at))
     
     pz = np.interp(z,z0,dVdz0)/(1.+z)*rhoz
     pz0 = dVdz0/(1.+z0)*rhoz0
