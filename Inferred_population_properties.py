@@ -4,8 +4,10 @@ from astropy.cosmology import Planck15 as cosmo
 from astropy.io import ascii
 from scipy.stats import gaussian_kde
 from scipy.ndimage import gaussian_filter
-import grbpop
+from scipy.interpolate import RegularGridInterpolator
+import grbpop, os, pathlib
 from inspect_fit_results import read_chain
+here = pathlib.Path(__file__).parent.resolve()
 
 # 2d greedy binning
 def samples_to_mesh(x,y,bins=(30,31),smooth=0.7,weights=None):
@@ -134,12 +136,12 @@ if recompute:
              'A':x[i,8],
              's_c':10**x[i,9],
              'y':x[i,10],
-             'at':x[i,11],
-             'tdmin':x[i,12]
+             'tdmin':x[i,11],
+             'at':x[i,12]
              }
         
         
-        # if chain2 is not None:
+        if chain2 is not None:
         #     theta_pop2 = {'jetmodel':'smooth double power law',
         #      'rho_z':'SBPL',
         #      'thc':10**x2[i,0],
@@ -157,7 +159,6 @@ if recompute:
         #      'b':x2[i,12],
         #      'zp':x2[i,13]
         #     }
-
             theta_pop2 = {'jetmodel':'smooth double power law',
              'rho_z':'DTD*SFH',
              'thc':10**x2[i,0],
@@ -171,8 +172,8 @@ if recompute:
              'A':x2[i,8],
              's_c':10**x2[i,9],
              'y':x2[i,10],
-             'at':x2[i,11],
-             'tdmin':x2[i,12]
+             'tdmin':x2[i,11],
+             'at':x2[i,12]
             }
 
         PEpL = grbpop.Ppop.PEpL(L,Ep,theta_pop,grid=True)
@@ -181,7 +182,7 @@ if recompute:
             rhoz = grbpop.Ppop.MD14_SFH(z,theta_pop['a'],theta_pop['b'],theta_pop['zp'])
             rhoz/=rhoz[0]
         elif (theta_pop['rho_z'] == 'DTD*SFH'):
-            rhoz = Itp_rhoz(np.log10(z),theta_pop['tdmin'],theta_pop['at'])
+            rhoz = Itp_rhoz((np.log10(z),theta_pop['tdmin'],theta_pop['at']))
             rhoz/=rhoz[0]
 
         psiz = rhoz/(1.+z)*dVdz
@@ -199,7 +200,7 @@ if recompute:
                 rhoz2 = grbpop.Ppop.MD14_SFH(z,theta_pop2['a'],theta_pop2['b'],theta_pop2['zp'])
                 rhoz2/=rhoz2[0]
             elif (theta_pop2['rho_z'] == 'DTD*SFH'):
-                rhoz2 = Itp_rhoz(np.log10(z),theta_pop2['tdmin'],theta_pop2['at'])
+                rhoz2 = Itp_rhoz((np.log10(z),theta_pop2['tdmin'],theta_pop2['at']))
                 rhoz2/=rhoz2[0]
             psiz2 = rhoz2/(1.+z)*dVdz
             R02[i] = Robs/np.trapz(np.trapz(np.trapz(PEpL2.reshape([len(Ep),len(L),1])*psiz2.reshape([1,1,len(z)])*Epg*Lg*zg*Pdet,np.log(z),axis=2),np.log(L),axis=1),np.log(Ep))
