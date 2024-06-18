@@ -79,6 +79,7 @@ def loglike(x):
     
     # smooth double power law jet model
     theta_pop = {'jetmodel':'smooth double power law',
+             'rho_z':'SBPL',
              'thc':10**x[0],
              'Lc*':10.**x[1],
              'a_L':x[2],
