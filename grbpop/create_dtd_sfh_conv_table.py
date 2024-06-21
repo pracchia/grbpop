@@ -34,8 +34,11 @@ for k in tqdm(range(len(tdmin))):
     for q in range(len(at)):
         dtd_norm = np.trapz(td_grid[td_index:]**(-at[q]), td_grid[td_index:])
         for i in range(len(z)):
-            zf_index = i + td_index + 1
-            td_int = td_grid[td_index:-(i+1)]
+            if i==0:
+                td_int = td_grid[td_index:]
+            else:
+                td_int = td_grid[td_index:-i]
+            zf_index = i + td_index
             zf_int = zf[zf_index:]
             dtd = td_int**(-at[q])/dtd_norm
             sfh = MD14_SFH(zf_int,a=a,b=b,zp=zp)
