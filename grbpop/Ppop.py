@@ -15,21 +15,33 @@ z0 = np.logspace(logzmin,logzmax,1000)
 dVdz0 = 4*np.pi*cosmo.differential_comoving_volume(z0).to('Gpc3 sr-1').value
 dL0 = cosmo.luminosity_distance(z0).to('cm').value
 
-# rho_z defined to select the density evolution model
+### rho_z defined to select the density evolution model ###
 # rho_z='SBPL' # Smoothly Broken Power Law. Parameters: theta_pop['a'] (slope before the peak), theta_pop['b'] (-slope after the peak) and theta_pop['zp'] (peak)
 rho_z='DTD*SFH' # convolution between a Delay Time Distribution and a Star Formation History. Parameters: theta_pop['at'] (slope) and theta_pop['tdmin'] (minimum merger time in Gyr)
+# dtd='pow'
+dtd='lognorm'
 
 if rho_z=='SBPL':# theta_pop parameters for smoothly broken power law as redshift distribution
     default_theta_pop = {'jetmodel':'smooth double power law','rho_z':'SBPL','thc':0.04,'Lc*':5e51,'a_L':4.7,'b_L':1.6,'Epc*':17.7e3,'a_Ep':1.9,'b_Ep':1.1,'thw':1.,'A':3.2,'s_c':1.,'y':-0.3,'a':4.6,'b':5.3,'zp':2.2}
-elif rho_z=='DTD*SFH':
-# theta_pop parameters for convolution DTD-SFH as redshift distribution
-    default_theta_pop = {'jetmodel':'smooth double power law','rho_z':'DTD*SFH','thc':0.04,'Lc*':5e51,'a_L':4.7,'b_L':1.6,'Epc*':17.7e3,'a_Ep':1.9,'b_Ep':1.1,'thw':1.,'A':3.2,'s_c':1.,'y':-0.3,'tdmin':0.1,'at':1.}
-    z_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/z.npy'))
-    tdmin_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/tdmin.npy'))
-    at_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/at.npy'))
-    rhoz_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/r_sgrb_pow.npy'))
-    Itp_rhoz = RegularGridInterpolator(points=(np.log10(z_grid),tdmin_grid,at_grid),values=np.nan_to_num(rhoz_grid),bounds_error=False)
+elif rho_z=='DTD*SFH' and dtd=='pow':
+# theta_pop parameters for convolution DTD-SFH as redshift distribution, with power-law DTD
+    default_theta_pop = {'jetmodel':'smooth double power law','rho_z':'DTD*SFH','dtd':'pow','thc':0.04,'Lc*':5e51,'a_L':4.7,'b_L':1.6,'Epc*':17.7e3,'a_Ep':1.9,'b_Ep':1.1,'thw':1.,'A':3.2,'s_c':1.,'y':-0.3,'tdmin':0.1,'at':1.}
+elif rho_z=='DTD*SFH' and dtd=='lognorm':
+# theta_pop parameters for convolution DTD-SFH as redshift distribution, with log-normal DTD
+    default_theta_pop = {'jetmodel':'smooth double power law','rho_z':'DTD*SFH','dtd':'lognorm','thc':0.04,'Lc*':5e51,'a_L':4.7,'b_L':1.6,'Epc*':17.7e3,'a_Ep':1.9,'b_Ep':1.1,'thw':1.,'A':3.2,'s_c':1.,'y':-0.3,'mu_td':2.,'sigma_td':1.}
 
+
+z_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/z.npy'))
+
+tdmin_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/tdmin.npy'))
+at_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/at.npy'))
+rhoz_grid_pow = np.load(os.path.join(here,'dtd_sfh_conv_tables/r_sgrb_pow.npy'))
+Itp_rhoz_pow = RegularGridInterpolator(points=(np.log10(z_grid),tdmin_grid,at_grid),values=np.nan_to_num(rhoz_grid_pow),bounds_error=False)
+
+mu_td_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/mu_td.npy'))
+sigma_td_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/sigma_td.npy'))
+rhoz_grid_log = np.load(os.path.join(here,'dtd_sfh_conv_tables/r_sgrb_log.npy'))
+Itp_rhoz_log = RegularGridInterpolator(points=(np.log10(z_grid),mu_td_grid,sigma_td_grid),values=np.nan_to_num(rhoz_grid_log),bounds_error=False)
 
 def PEpLthv(L,Ep,thv,theta_pop=default_theta_pop):
     """
@@ -92,7 +104,7 @@ def Pz(z,theta_pop=default_theta_pop,normalize=True):
     - if theta_pop['rho_z']=='SBPL', the density evolution model is a Smoothly Broken Power Law and its parameters
       are  theta_pop['a'] (slope before the peak), theta_pop['b'] (-slope after the peak) and theta_pop['zp'] (peak);
     - if theta_pop['rho_z']=='DTD*SFH', the density evolution model is a convolution between a Delay Time Distribution
-      and a Star Formation History, with parameters theta_pop['at'] (slope) and theta_pop['tdmin'] (minimum merger time in Gyr)
+      and a Star Formation History. The Delay Time Distribution can be chosen to be either a power-law, with parameters theta_pop['at'] (slope) and theta_pop['tdmin'] (minimum merger time in Gyr), or a log-normal distribution, with parameters theta_pop['mu_td'] and theta_pop['sigma_td'] (both expressed in Gyr)
     
     If normalize=False, then rho(z)/R0 * 1/(1+z) * dV/dz is returned.
     """
@@ -103,11 +115,17 @@ def Pz(z,theta_pop=default_theta_pop,normalize=True):
         rhoz = MD14_SFH(z,a,b,zp)
         rhoz0 = MD14_SFH(z0,a,b,zp)
         
-    elif theta_pop['rho_z'] == 'DTD*SFH':
+    elif theta_pop['rho_z'] == 'DTD*SFH' and theta_pop['dtd'] == 'pow':
         at = theta_pop['at']
         tdmin = theta_pop['tdmin']
-        rhoz = Itp_rhoz((np.log10(z),tdmin,at))
-        rhoz0 = Itp_rhoz((np.log10(z0),tdmin,at))
+        rhoz = Itp_rhoz_pow((np.log10(z),tdmin,at))
+        rhoz0 = Itp_rhoz_pow((np.log10(z0),tdmin,at))
+
+    elif theta_pop['rho_z'] == 'DTD*SFH' and theta_pop['dtd'] == 'lognorm':
+        mu = theta_pop['mu_td']
+        sigma = theta_pop['sigma_td']
+        rhoz = Itp_rhoz_log((np.log10(z),mu,sigma))
+        rhoz0 = Itp_rhoz_log((np.log10(z0),mu,sigma))
     
     pz = np.interp(z,z0,dVdz0)/(1.+z)*rhoz
     pz0 = dVdz0/(1.+z0)*rhoz0

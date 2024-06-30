@@ -48,9 +48,6 @@ thvs = rng.choice(thv17,Nsamples,p=w/np.sum(w))
 # set low-energy photon index to the median of the GBM sample
 alpha=-0.4
 
-# rho_z defined to select the density evolution model
-# rho_z='SBPL' # Smoothly Broken Power Law. Parameters: theta_pop['a'] (slope before the peak), theta_pop['b'] (-slope after the peak) and theta_pop['zp'] (peak)
-# rho_z='DTD*SFH' # convolution between a Delay Time Distribution and a Star Formation History. Parameters: theta_pop['at'] (slope) and theta_pop['tdmin'] (minimum merger time in Gyr)
 
 def logprior(theta_pop): ### OK
     """
@@ -68,8 +65,10 @@ def logprior(theta_pop): ### OK
     or theta_pop['A']<1.5 or theta_pop['A']>5.\
     or theta_pop['s_c']<0.3 or theta_pop['s_c']>3.\
     or theta_pop['y']<-3. or theta_pop['y']>3.\
-    or theta_pop['tdmin']<0.1 or theta_pop['tdmin']>3.\
-    or theta_pop['at']<0. or theta_pop['at']>3.:
+    # or theta_pop['tdmin']<0.01 or theta_pop['tdmin']>3.\ ### 'dtd':'pow'
+    # or theta_pop['at']<0. or theta_pop['at']>3.: ### 'dtd':'pow'
+    or theta_pop['mu_td']<0.001 or theta_pop['mu_td']>3.\ ### 'dtd':'lognorm'
+    or theta_pop['sigma_td']<0.001 or theta_pop['sigma_td']>3.: ### 'dtd':'lognorm'
         return -np.inf
     else:
         return np.log(theta_pop['thc']) + np.log(np.sin(theta_pop['thc'])) + np.log(theta_pop['thw']) + np.log(np.sin(theta_pop['thw'])) # "isotropic" prior on angles
@@ -82,6 +81,8 @@ def loglike(x): ### OK
     # smooth double power law jet model
     theta_pop = {'jetmodel':'smooth double power law',
              'rho_z':'DTD*SFH',
+             # 'dtd':'pow',
+             'dtd':'lognorm',
              'thc':10**x[0],
              'Lc*':10.**x[1],
              'a_L':x[2],
@@ -93,8 +94,10 @@ def loglike(x): ### OK
              'A':x[8],
              's_c':10.**x[9],
              'y':x[10],
-             'tdmin':x[11],
-             'at':x[12]
+             # 'tdmin':x[11], ### 'dtd':'pow'
+             'mu_td':x[11], ### 'dtd':'lognorm'
+             # 'at':x[12] ### 'dtd':'pow'
+             'sigma_td':x[12] ### 'dtd':'lognorm'
              }
     
     pi_EpLz = lambda Epx,Lx,zx:Lx**-1*(1.+zx)**-1 # Ep,L,z prior from spectral analysis
@@ -129,11 +132,16 @@ def loglike(x): ### OK
 if __name__=='__main__':
     nthreads = 8
     N_iter = 10000
-    chain_filename = 'chains/SGRB_flux-limited-sample-analysis_dtdsfh.h5' # full
+    # chain_filename = 'chains/SGRB_flux-limited-sample-analysis_dtdsfh_pow.h5' # full
+    chain_filename = 'chains/SGRB_flux-limited-sample-analysis_dtdsfh_lognorm.h5' # full
     
-    # initial guess vector
+    # initial guess vector for 'dtd':'pow'
     #      log(thj)  log(Lj) a_L      b_L   log(Epj) a_Ep    b_Ep  log(thw)  A       log(s_c)    y    tdmin at   
-    x0 = [-1.877,     51.55, 4.091, -2.318, 3.804,    1.2,   2.069, -0.5058, 3.041, -0.01476, -0.1149, 0.1, 1.]  # starting guess
+    # x0 = [-1.877,     51.55, 4.091, -2.318, 3.804,    1.2,   2.069, -0.5058, 3.041, -0.01476, -0.1149, 0.1, 1.]  # starting guess for 'dtd':'pow'
+    
+    # initial guess vector for 'dtd':'lognorm'
+    #      log(thj)  log(Lj) a_L      b_L   log(Epj) a_Ep    b_Ep  log(thw)  A       log(s_c)    y    mu_td sigma_td   
+    x0 = [-1.877,     51.55, 4.091, -2.318, 3.804,    1.2,   2.069, -0.5058, 3.041, -0.01476, -0.1149, 2.,    1.]  # starting guess for 'dtd':'lognorm'
     
     # as a cross check
     print('Log likelihood at starting guess: ',loglike(x0))
