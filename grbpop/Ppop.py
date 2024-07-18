@@ -476,9 +476,19 @@ def logalpha_obsframe(theta_pop,pflim=3.5,inst='Fermi',pdet='gbm',alpha=-0.4,spe
 
 def log_poissonian_observer(theta_pop, N_obs, eta=0.59, T=13.,pflim=3.5,inst='Fermi',pdet='gbm',alpha=-0.4,specmodel='Comp',res=100):
     """
-    -N(R0)*alpha(thetapop') + N_obs*ln(N(R0)*alpha(thetapop'))
-    N(R0)=eta*alpha(lambda')*R*T.
-    observer-frame sample: eta = 0.59 Burns et al. (2016), T = 13 yrs
+    Compute the logarithm of the Poissonian distribution of the observed multi-messenger detections of GRBs and GWs.
+    Parameters:
+    - theta_pop: dictionary specifying the population parameters
+    - N_obs: number of observed GRB events
+    - eta: factor that corrects for the accessible field of view and the duty cycle of the detectors considered
+    - T: total observing time
+    - pflim: if pdet_GRB=None, this indicates the photon flux selection cut of the sample
+    - inst: either "Fermi" (in which case the photon flux is computed in the 50-300 keV band) or "Swift" (in which case it is computed in the 15-150 keV band) 
+    - pdet: either "gbm" (in which case the GBM detection efficiency model of Salafia et al. 2023 is used), or None, in which case the photon flux cut is used. It can also be a callable, in which case it must be a function of pkflux, E_pobs
+    - specmodel: spectral model, either 'Comp' or 'Band'
+    - res: resolution for L, Ep and z grids
+    
+    Returns the logarithm of the Poissonian distribution of multimessenger GRB-GW detections given the population parameter vector theta_pop
     """
     
     if (theta_pop['rho_z']=='SBPL'): 
@@ -505,9 +515,20 @@ def log_poissonian_observer(theta_pop, N_obs, eta=0.59, T=13.,pflim=3.5,inst='Fe
 def log_poissonian_GRB_GW(theta_pop,N_obs,eta=0.59,T=11/12,pflim=3.5,inst='Fermi',pdet_GRB='gbm',pdet_GW='O3',alpha=-0.5,specmodel='Comp',res=60,thvres=300):
     """
     Compute the logarithm of the Poissonian distribution of the observed multi-messenger detections of GRBs and GWs.
-    -N(R0)*alpha(thetapop') + N_obs*ln(N(R0)*alpha(thetapop'))
-    N(R0)=eta*alpha(lambda')*R*T.
-    observer-frame sample: eta = 0.967*0.59 Burns et al. (2016), T = 11/12
+    Parameters:
+    - theta_pop: dictionary specifying the population parameters
+    - N_obs: number of observed multimessenger GRB-GW events
+    - eta: factor that corrects for the accessible field of view and the duty cycle of the detectors considered
+    - T: total observing time
+    - pflim: if pdet_GRB=None, this indicates the photon flux selection cut of the sample
+    - inst: either "Fermi" (in which case the photon flux is computed in the 50-300 keV band) or "Swift" (in which case it is computed in the 15-150 keV band) 
+    - pdet_GRB: either "gbm" (in which case the GBM detection efficiency model of Salafia et al. 2023 is used), or None, in which case the photon flux cut is used. It can also be a callable, in which case it must be a function of pkflux, E_pobs.
+    - pdet_GW: either "O3" (HL sensitivity to BNS mergers in O3, constructed using the injections from https://zenodo.org/record/7890437), "O4" (projected HLV sensitivity to BNS mergers in O4, following Colombo et al. 2022) or "GW170817" (actual HL sensitivity to GW170817, using the psd from https://dcc.ligo.org/LIGO-P1900011/public)
+    - specmodel: spectral model, either 'Comp' or 'Band'
+    - res: resolution for L, Ep and z grids
+    - thvres: resolution for thv grid
+
+    Returns the logarithm of the Poissonian distribution of multimessenger GRB-GW detections given the population parameter vector theta_pop
     """
     if (theta_pop['rho_z']=='SBPL'): 
         rhoz = MD14_SFH(z0,theta_pop['a'],theta_pop['b'],theta_pop['zp'])
@@ -527,4 +548,4 @@ def log_poissonian_GRB_GW(theta_pop,N_obs,eta=0.59,T=11/12,pflim=3.5,inst='Fermi
     N_det = eta*R*T*np.exp(logalpha)
     logPoisson = N_obs*np.log(N_det) - N_det
     return logPoisson
-    
+
