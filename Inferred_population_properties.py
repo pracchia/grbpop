@@ -45,8 +45,10 @@ recompute = True
 
 suffix = '' 
 
+# chain = 'chains/SGRB_full-sample-analysis_dtdsfh_log.h5'
 chain = 'chains/SGRB_full-sample-analysis_dtdsfh.h5'
 # chain = 'chains/SGRB_full-sample-analysis.h5'
+# chain2 = 'chains/SGRB_flux-limited-sample-analysis_dtdsfh_log.h5'
 chain2 = 'chains/SGRB_flux-limited-sample-analysis_dtdsfh.h5'
 # chain2 = 'chains/SGRB_flux-limited-sample-analysis.h5'
 specmodel = 'Comp'
@@ -84,9 +86,14 @@ if recompute:
     z_grid = np.load(os.path.join(here,'grbpop/dtd_sfh_conv_tables/z.npy'))
     tdmin_grid = np.load(os.path.join(here,'grbpop/dtd_sfh_conv_tables/tdmin.npy'))
     at_grid = np.load(os.path.join(here,'grbpop/dtd_sfh_conv_tables/at.npy'))
-    rhoz_grid = np.load(os.path.join(here,'grbpop/dtd_sfh_conv_tables/r_sgrb_pow.npy'))
-    Itp_rhoz = RegularGridInterpolator(points=(np.log10(z_grid),tdmin_grid,at_grid),values=np.nan_to_num(rhoz_grid),bounds_error=False)
+    rhoz_grid_pow = np.load(os.path.join(here,'grbpop/dtd_sfh_conv_tables/r_sgrb_pow.npy'))
+    Itp_rhoz_pow = RegularGridInterpolator(points=(np.log10(z_grid),tdmin_grid,at_grid),values=np.nan_to_num(rhoz_grid_pow),bounds_error=False)
     
+    mu_td_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/mu_td.npy'))
+    sigma_td_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/sigma_td.npy'))
+    rhoz_grid_log = np.load(os.path.join(here,'dtd_sfh_conv_tables/r_sgrb_log.npy'))
+    Itp_rhoz_log = RegularGridInterpolator(points=(np.log10(z_grid),mu_td_grid,sigma_td_grid),values=np.nan_to_num(rhoz_grid_log),bounds_error=False)
+
     R0 = np.zeros(N)
     dR0_dlogL = np.zeros([N,len(L)])
     dN_dVdt = np.zeros([N,len(z)])
@@ -125,6 +132,7 @@ if recompute:
 
         theta_pop = {'jetmodel':'smooth double power law',
              'rho_z':'DTD*SFH',
+             'dtd':'pow',
              'thc':10**x[i,0],
              'Lc*':10**x[i,1],
              'a_L':x[i,2],
@@ -139,7 +147,12 @@ if recompute:
              'tdmin':x[i,11],
              'at':x[i,12]
              }
-        
+             # 'dtd':'lognorm',
+             # 'mu_td':x[i,11],
+             # 'sigma_td':x[i,12]
+             # 'dtd':'pow',
+             # 'tdmin':x[i,11],
+             # 'at':x[i,12]
         
         if chain2 is not None:
         #     theta_pop2 = {'jetmodel':'smooth double power law',
@@ -161,6 +174,7 @@ if recompute:
         #     }
             theta_pop2 = {'jetmodel':'smooth double power law',
              'rho_z':'DTD*SFH',
+             'dtd':'pow',
              'thc':10**x2[i,0],
              'Lc*':10**x2[i,1],
              'a_L':x2[i,2],
@@ -175,14 +189,23 @@ if recompute:
              'tdmin':x2[i,11],
              'at':x2[i,12]
             }
-
+             # 'dtd':'lognorm',
+             # 'mu_td':x[i,11],
+             # 'sigma_td':x[i,12]
+             # 'dtd':'pow',
+             # 'tdmin':x[i,11],
+             # 'at':x[i,12]
+        
         PEpL = grbpop.Ppop.PEpL(L,Ep,theta_pop,grid=True)
         PEpL/=np.trapz(np.trapz(PEpL*Epg[:,:,0]*Lg[:,:,0],np.log(L),axis=1),np.log(Ep))
-        if (theta_pop['rho_z'] == 'SBPL'): 
+        if (theta_pop['rho_z']=='SBPL'): 
             rhoz = grbpop.Ppop.MD14_SFH(z,theta_pop['a'],theta_pop['b'],theta_pop['zp'])
             rhoz/=rhoz[0]
-        elif (theta_pop['rho_z'] == 'DTD*SFH'):
-            rhoz = Itp_rhoz((np.log10(z),theta_pop['tdmin'],theta_pop['at']))
+        elif (theta_pop['rho_z']=='DTD*SFH' and theta_pop['dtd']=='pow'):
+            rhoz = Itp_rhoz_pow((np.log10(z),theta_pop['tdmin'],theta_pop['at']))
+            rhoz/=rhoz[0]
+        elif (theta_pop['rho_z']=='DTD*SFH' and theta_pop['dtd']=='lognorm'):
+            rhoz = Itp_rhoz_log((np.log10(z),theta_pop['mu_td'],theta_pop['sigma_td']))
             rhoz/=rhoz[0]
 
         psiz = rhoz/(1.+z)*dVdz
@@ -196,12 +219,16 @@ if recompute:
         if chain2 is not None:
             PEpL2 = grbpop.Ppop.PEpL(L,Ep,theta_pop2,grid=True)
             PEpL2/=np.trapz(np.trapz(PEpL2*Epg[:,:,0]*Lg[:,:,0],np.log(L),axis=1),np.log(Ep))
-            if (theta_pop2['rho_z'] == 'SBPL'): 
+            if (theta_pop2['rho_z']=='SBPL'): 
                 rhoz2 = grbpop.Ppop.MD14_SFH(z,theta_pop2['a'],theta_pop2['b'],theta_pop2['zp'])
                 rhoz2/=rhoz2[0]
-            elif (theta_pop2['rho_z'] == 'DTD*SFH'):
-                rhoz2 = Itp_rhoz((np.log10(z),theta_pop2['tdmin'],theta_pop2['at']))
+            elif (theta_pop2['rho_z']=='DTD*SFH' and theta_pop['dtd']=='pow'):
+                rhoz2 = Itp_rhoz_pow((np.log10(z),theta_pop2['tdmin'],theta_pop2['at']))
                 rhoz2/=rhoz2[0]
+            elif (theta_pop2['rho_z']=='DTD*SFH' and theta_pop['dtd']=='lognorm'):
+                rhoz2 = Itp_rhoz_log((np.log10(z),theta_pop2['mu_td'],theta_pop2['sigma_td']))
+                rhoz2/=rhoz2[0]
+            
             psiz2 = rhoz2/(1.+z)*dVdz
             R02[i] = Robs/np.trapz(np.trapz(np.trapz(PEpL2.reshape([len(Ep),len(L),1])*psiz2.reshape([1,1,len(z)])*Epg*Lg*zg*Pdet,np.log(z),axis=2),np.log(L),axis=1),np.log(Ep))
             R02[i] = np.nan_to_num(R02[i])

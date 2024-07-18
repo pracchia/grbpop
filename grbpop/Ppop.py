@@ -16,19 +16,19 @@ dVdz0 = 4*np.pi*cosmo.differential_comoving_volume(z0).to('Gpc3 sr-1').value
 dL0 = cosmo.luminosity_distance(z0).to('cm').value
 
 ### rho_z defined to select the density evolution model ###
-# rho_z='SBPL' # Smoothly Broken Power Law. Parameters: theta_pop['a'] (slope before the peak), theta_pop['b'] (-slope after the peak) and theta_pop['zp'] (peak)
-rho_z='DTD*SFH' # convolution between a Delay Time Distribution and a Star Formation History. Parameters: theta_pop['at'] (slope) and theta_pop['tdmin'] (minimum merger time in Gyr)
-# dtd='pow'
-dtd='lognorm'
+rho_z='SBPL' # Smoothly Broken Power Law. Parameters: theta_pop['a'] (slope before the peak), theta_pop['b'] (-slope after the peak) and theta_pop['zp'] (peak)
+# rho_z='DTD*SFH' # convolution between a Delay Time Distribution and a Star Formation History. Parameters: theta_pop['at'] (slope) and theta_pop['tdmin'] (minimum merger time in Gyr)
+dtd='pow'
+# dtd='lognorm'
 
 if rho_z=='SBPL':# theta_pop parameters for smoothly broken power law as redshift distribution
-    default_theta_pop = {'jetmodel':'smooth double power law','rho_z':'SBPL','thc':0.04,'Lc*':5e51,'a_L':4.7,'b_L':1.6,'Epc*':17.7e3,'a_Ep':1.9,'b_Ep':1.1,'thw':1.,'A':3.2,'s_c':1.,'y':-0.3,'a':4.6,'b':5.3,'zp':2.2}
+    default_theta_pop = {'jetmodel':'smooth double power law','rho_z':'SBPL','thc':0.04,'Lc*':5e51,'a_L':4.7,'b_L':1.6,'Epc*':17.7e3,'a_Ep':1.9,'b_Ep':1.1,'thw':1.,'A':3.2,'s_c':1.,'y':-0.3,'a':4.6,'b':5.3,'zp':2.2,'R0':100.}
 elif rho_z=='DTD*SFH' and dtd=='pow':
 # theta_pop parameters for convolution DTD-SFH as redshift distribution, with power-law DTD
-    default_theta_pop = {'jetmodel':'smooth double power law','rho_z':'DTD*SFH','dtd':'pow','thc':0.04,'Lc*':5e51,'a_L':4.7,'b_L':1.6,'Epc*':17.7e3,'a_Ep':1.9,'b_Ep':1.1,'thw':1.,'A':3.2,'s_c':1.,'y':-0.3,'tdmin':0.1,'at':1.}
+    default_theta_pop = {'jetmodel':'smooth double power law','rho_z':'DTD*SFH','dtd':'pow','thc':0.04,'Lc*':5e51,'a_L':4.7,'b_L':1.6,'Epc*':17.7e3,'a_Ep':1.9,'b_Ep':1.1,'thw':1.,'A':3.2,'s_c':1.,'y':-0.3,'tdmin':0.1,'at':1.,'R0':100.}
 elif rho_z=='DTD*SFH' and dtd=='lognorm':
 # theta_pop parameters for convolution DTD-SFH as redshift distribution, with log-normal DTD
-    default_theta_pop = {'jetmodel':'smooth double power law','rho_z':'DTD*SFH','dtd':'lognorm','thc':0.04,'Lc*':5e51,'a_L':4.7,'b_L':1.6,'Epc*':17.7e3,'a_Ep':1.9,'b_Ep':1.1,'thw':1.,'A':3.2,'s_c':1.,'y':-0.3,'mu_td':2.,'sigma_td':1.}
+    default_theta_pop = {'jetmodel':'smooth double power law','rho_z':'DTD*SFH','dtd':'lognorm','thc':0.04,'Lc*':5e51,'a_L':4.7,'b_L':1.6,'Epc*':17.7e3,'a_Ep':1.9,'b_Ep':1.1,'thw':1.,'A':3.2,'s_c':1.,'y':-0.3,'mu_td':2.,'sigma_td':1.,'R0':100.}
 
 
 z_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/z.npy'))
@@ -348,6 +348,7 @@ def known_theta_view_loglikelihood(Ls,Eps,thvs,theta_pop=default_theta_pop,prior
     else:
         return -np.inf
 
+
 def logalpha_GRB_GW(theta_pop,pflim=3.5,inst='Fermi',pdet_GRB='gbm',pdet_GW='O3',alpha=-0.5,specmodel='Comp',res=60,thvres=300):
     """
     Compute log(alpha), where alpha stands for the integral $ \int P_{pop}(\theta_{source} | \theta_{pop}) P_{det}(\theta_{source}) d\theta_{source} $,
@@ -417,5 +418,113 @@ def logalpha_GRB_GW(theta_pop,pflim=3.5,inst='Fermi',pdet_GRB='gbm',pdet_GW='O3'
     alpha = np.trapz(np.trapz(np.trapz(PEpLz_GRBGW*Pdet*zg*Epg*Lg,np.log(z),axis=2),np.log(L),axis=1),np.log(Ep),axis=0)
     
     return np.log(alpha)
+
+
+def logalpha_obsframe(theta_pop,pflim=3.5,inst='Fermi',pdet='gbm',alpha=-0.4,specmodel='Comp',res=100):
+    """
+    Compute log(alpha), where alpha stands for the integral $ \int P_{pop}(\theta_{source} | \theta_{pop}) P_{det}(\theta_{source}) d\theta_{source} $, which represents the normalization of the individual likelihood factors in the hierarchical Bayesian posterior (see Mandel et al. 2019, Salafia et al. 2023).
+    Here we assume P_det = P_det_GRB, i.e. we focus on the detections of a GRB.  
     
+    Parameters:
+    - theta_pop: dictionary specifying the population parameters
+    - pflim: if pdet_GRB=None, this indicates the photon flux selection cut of the sample
+    - inst: either "Fermi" (in which case the photon flux is computed in the 50-300 keV band) or "Swift" (in which case it is computed in the 15-150 keV band) 
+    - pdet: either "gbm" (in which case the GBM detection efficiency model of Salafia et al. 2023 is used), or None, in which case the photon flux cut is used. It can also be a callable, in which case it must be a function of pkflux,E_pobs.
+    - res: resolution for L, Ep and z grids
+    
+    Returns the value of log(alpha) given the population parameter vector theta_pop.    
+    """
+    
+    
+    # construct grid (unequal axes to avoid confusing them)
+    L = np.logspace(logLmin,logLmax,res)
+    Ep = np.logspace(logEpmin,logEpmax,res+1)
+    z = np.logspace(logzmin,logzmax,res-1)
+    
+    # make 3D mesh grid
+    zg = z.reshape([1,1,len(z)])
+    Epg = Ep.reshape([len(Ep),1,1])
+    Lg = L.reshape([1,len(L),1])
+    
+    EpLz = Epg*Lg*zg
+    
+    # compute population probability distribution
+    pz = Pz(z,theta_pop)
+    Pepl = PEpL(L,Ep,theta_pop)
+    Ppop = Pepl.reshape([len(Ep),len(L),1])*pz
+    PpopEpLz = Ppop*EpLz
+    
+    # compute peak flux on the grid    
+    pf_EpLz = pflux.pflux_from_L(zg,Epg,Lg,alpha=alpha,inst=inst,model=specmodel)
+    
+    # compute ep on the grid
+    ep_EpLz = Epg/(1.+zg)
+    
+    # detection probability
+    if pdet is None:
+        Pdet = (pf_EpLz>=pflim)
+    elif pdet=='gbm':
+        Pdet = pdet_GBM(pf_EpLz,ep_EpLz)
+    else:
+        Pdet = pdet(pf_EpLz,ep_EpLz)
+    
+    # compute log(fraction of accessible population above the flux limit)
+    logalpha = np.log(np.trapz(np.trapz(np.trapz(PpopEpLz*Pdet,np.log(z),axis=2),np.log(L),axis=1),np.log(Ep),axis=0))
+    
+    return logalpha
+
+
+def log_poissonian_observer(theta_pop, N_obs, eta=0.59, T=13.,pflim=3.5,inst='Fermi',pdet='gbm',alpha=-0.4,specmodel='Comp',res=100):
+    """
+    -N(R0)*alpha(thetapop') + N_obs*ln(N(R0)*alpha(thetapop'))
+    N(R0)=eta*alpha(lambda')*R*T.
+    observer-frame sample: eta = 0.59 Burns et al. (2016), T = 13 yrs
+    """
+    
+    if (theta_pop['rho_z']=='SBPL'): 
+        rhoz = MD14_SFH(z0,theta_pop['a'],theta_pop['b'],theta_pop['zp'])
+        rhoz/=rhoz[0]
+    elif (theta_pop['rho_z']=='DTD*SFH' and theta_pop['dtd']=='pow'):
+        rhoz = Itp_rhoz_pow((np.log10(z0),theta_pop['tdmin'],theta_pop['at']))
+        rhoz/=rhoz[0]
+    elif (theta_pop['rho_z']=='DTD*SFH' and theta_pop['dtd']=='lognorm'):
+        rhoz = Itp_rhoz_log((np.log10(z0),theta_pop['mu_td'],theta_pop['sigma_td']))
+        rhoz/=rhoz[0]
+    
+    pz = dVdz0/(1.+z0)*rhoz*theta_pop['R0']
+    R = np.trapz(pz,z0)
+    
+    logalpha = logalpha_obsframe(theta_pop,pflim,inst,pdet,alpha,specmodel,res)
+
+    N_det = eta*R*T*np.exp(logalpha)
+    logPoisson = N_obs*np.log(N_det) - N_det
+    return logPoisson
+
+
+# 0.967*0.59
+def log_poissonian_GRB_GW(theta_pop,N_obs,eta=0.59,T=11/12,pflim=3.5,inst='Fermi',pdet_GRB='gbm',pdet_GW='O3',alpha=-0.5,specmodel='Comp',res=60,thvres=300):
+    """
+    Compute the logarithm of the Poissonian distribution of the observed multi-messenger detections of GRBs and GWs.
+    -N(R0)*alpha(thetapop') + N_obs*ln(N(R0)*alpha(thetapop'))
+    N(R0)=eta*alpha(lambda')*R*T.
+    observer-frame sample: eta = 0.967*0.59 Burns et al. (2016), T = 11/12
+    """
+    if (theta_pop['rho_z']=='SBPL'): 
+        rhoz = MD14_SFH(z0,theta_pop['a'],theta_pop['b'],theta_pop['zp'])
+        rhoz/=rhoz[0]
+    elif (theta_pop['rho_z']=='DTD*SFH' and theta_pop['dtd']=='pow'):
+        rhoz = Itp_rhoz_pow((np.log10(z0),theta_pop['tdmin'],theta_pop['at']))
+        rhoz/=rhoz[0]
+    elif (theta_pop['rho_z']=='DTD*SFH' and theta_pop['dtd']=='lognorm'):
+        rhoz = Itp_rhoz_log((np.log10(z0),theta_pop['mu_td'],theta_pop['sigma_td']))
+        rhoz/=rhoz[0]
+    
+    pz = dVdz0/(1.+z0)*rhoz*theta_pop['R0']
+    R = np.trapz(pz,z0)
+
+    logalpha = logalpha_GRB_GW(theta_pop,pflim,inst,pdet_GRB,pdet_GW,alpha,specmodel,res,thvres)
+    
+    N_det = eta*R*T*np.exp(logalpha)
+    logPoisson = N_obs*np.log(N_det) - N_det
+    return logPoisson
     
