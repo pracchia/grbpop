@@ -474,7 +474,7 @@ def logalpha_obsframe(theta_pop,pflim=3.5,inst='Fermi',pdet='gbm',alpha=-0.4,spe
     return logalpha
 
 
-def log_poissonian_observer(theta_pop, N_obs, eta=0.59, T=13.,pflim=3.5,inst='Fermi',pdet='gbm',alpha=-0.4,specmodel='Comp',res=100):
+def log_poissonian_observer(theta_pop, N_obs, eta=0.59, T=13., logalpha=None,pflim=3.5,inst='Fermi',pdet='gbm',alpha=-0.4,specmodel='Comp',res=100):
     """
     Compute the logarithm of the Poissonian distribution of the observed multi-messenger detections of GRBs and GWs.
     Parameters:
@@ -482,6 +482,7 @@ def log_poissonian_observer(theta_pop, N_obs, eta=0.59, T=13.,pflim=3.5,inst='Fe
     - N_obs: number of observed GRB events
     - eta: factor that corrects for the accessible field of view and the duty cycle of the detectors considered
     - T: total observing time
+    - logalpha: if given, this is assumed to be the logarithm of the integral of Ppop*pdet, in which case its computation is avoided (to improve performance)
     - pflim: if pdet_GRB=None, this indicates the photon flux selection cut of the sample
     - inst: either "Fermi" (in which case the photon flux is computed in the 50-300 keV band) or "Swift" (in which case it is computed in the 15-150 keV band) 
     - pdet: either "gbm" (in which case the GBM detection efficiency model of Salafia et al. 2023 is used), or None, in which case the photon flux cut is used. It can also be a callable, in which case it must be a function of pkflux, E_pobs
@@ -490,7 +491,7 @@ def log_poissonian_observer(theta_pop, N_obs, eta=0.59, T=13.,pflim=3.5,inst='Fe
     
     Returns the logarithm of the Poissonian distribution of multimessenger GRB-GW detections given the population parameter vector theta_pop
     """
-    
+    # Select the normalized sGRB rate density redshift distribution 
     if (theta_pop['rho_z']=='SBPL'): 
         rhoz = MD14_SFH(z0,theta_pop['a'],theta_pop['b'],theta_pop['zp'])
         rhoz/=rhoz[0]
@@ -502,17 +503,18 @@ def log_poissonian_observer(theta_pop, N_obs, eta=0.59, T=13.,pflim=3.5,inst='Fe
         rhoz/=rhoz[0]
     
     pz = dVdz0/(1.+z0)*rhoz*theta_pop['R0']
-    R = np.trapz(pz,z0)
-    
-    logalpha = logalpha_obsframe(theta_pop,pflim,inst,pdet,alpha,specmodel,res)
+    R = np.trapz(pz,z0) # Total astrophysical rate of events
 
-    N_det = eta*R*T*np.exp(logalpha)
+    # if logalpha is not given, compute it
+    if logalpha is None:
+        logalpha = logalpha_obsframe(theta_pop,pflim,inst,pdet,alpha,specmodel,res)
+
+    N_det = eta*R*T*np.exp(logalpha) # Number of detections expected
     logPoisson = N_obs*np.log(N_det) - N_det
     return logPoisson
 
 
-# 0.967*0.59
-def log_poissonian_GRB_GW(theta_pop,N_obs,eta=0.59,T=11/12,pflim=3.5,inst='Fermi',pdet_GRB='gbm',pdet_GW='O3',alpha=-0.5,specmodel='Comp',res=60,thvres=300):
+def log_poissonian_GRB_GW(theta_pop,N_obs,eta=0.59,T=11/12,logalpha=None,pflim=3.5,inst='Fermi',pdet_GRB='gbm',pdet_GW='O3',alpha=-0.5,specmodel='Comp',res=60,thvres=300):
     """
     Compute the logarithm of the Poissonian distribution of the observed multi-messenger detections of GRBs and GWs.
     Parameters:
@@ -520,6 +522,7 @@ def log_poissonian_GRB_GW(theta_pop,N_obs,eta=0.59,T=11/12,pflim=3.5,inst='Fermi
     - N_obs: number of observed multimessenger GRB-GW events
     - eta: factor that corrects for the accessible field of view and the duty cycle of the detectors considered
     - T: total observing time
+    - logalpha: if given, this is assumed to be the logarithm of the integral of Ppop*pdet, in which case its computation is avoided (to improve performance)
     - pflim: if pdet_GRB=None, this indicates the photon flux selection cut of the sample
     - inst: either "Fermi" (in which case the photon flux is computed in the 50-300 keV band) or "Swift" (in which case it is computed in the 15-150 keV band) 
     - pdet_GRB: either "gbm" (in which case the GBM detection efficiency model of Salafia et al. 2023 is used), or None, in which case the photon flux cut is used. It can also be a callable, in which case it must be a function of pkflux, E_pobs.
@@ -530,6 +533,7 @@ def log_poissonian_GRB_GW(theta_pop,N_obs,eta=0.59,T=11/12,pflim=3.5,inst='Fermi
 
     Returns the logarithm of the Poissonian distribution of multimessenger GRB-GW detections given the population parameter vector theta_pop
     """
+    # Select the normalized sGRB rate density redshift distribution 
     if (theta_pop['rho_z']=='SBPL'): 
         rhoz = MD14_SFH(z0,theta_pop['a'],theta_pop['b'],theta_pop['zp'])
         rhoz/=rhoz[0]
@@ -539,13 +543,14 @@ def log_poissonian_GRB_GW(theta_pop,N_obs,eta=0.59,T=11/12,pflim=3.5,inst='Fermi
     elif (theta_pop['rho_z']=='DTD*SFH' and theta_pop['dtd']=='lognorm'):
         rhoz = Itp_rhoz_log((np.log10(z0),theta_pop['mu_td'],theta_pop['sigma_td']))
         rhoz/=rhoz[0]
-    
-    pz = dVdz0/(1.+z0)*rhoz*theta_pop['R0']
-    R = np.trapz(pz,z0)
 
-    logalpha = logalpha_GRB_GW(theta_pop,pflim,inst,pdet_GRB,pdet_GW,alpha,specmodel,res,thvres)
+    pz = dVdz0/(1.+z0)*rhoz*theta_pop['R0']
+    R = np.trapz(pz,z0) # Total astrophysical rate of events
+
+    # if logalpha is not given, compute it
+    if logalpha is None:
+        logalpha = logalpha_GRB_GW(theta_pop,pflim,inst,pdet_GRB,pdet_GW,alpha,specmodel,res,thvres)
     
-    N_det = eta*R*T*np.exp(logalpha)
+    N_det = eta*R*T*np.exp(logalpha) # Number of detections expected
     logPoisson = N_obs*np.log(N_det) - N_det
     return logPoisson
-

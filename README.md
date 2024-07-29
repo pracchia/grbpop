@@ -16,7 +16,7 @@ In order to run the scripts that use `grbpop` to fit the SGRB population and to 
 
 ## Usage
 
-First clone this repository and add its root directory to your PYTHONPATH environment variable. Then you need to run once the `create_pflux_table.py` script in the `grbpop/` subdirectory, in order to create the tables over which the flux as a function of luminosity is interpolated within the code. You then can write `import grbpop` in a python shell or in a script in order to access its module and submodules. The code is composed of the following main scripts:
+First clone this repository and add its root directory to your PYTHONPATH environment variable. Then you need to run once the `create_pflux_table.py` and the `create_dtd_sfh_conv_table.py` scripts in the `grbpop/` subdirectory: the former creates the tables over which the flux as a function of luminosity is interpolated within the code, the latter does the same but for the convolution integrals of the delay time distribution with the star formation history for the sGRB rate density redshift distribution. You then can write `import grbpop` in a python shell or in a script in order to access its module and submodules. The code is composed of the following main scripts:
 -   `grbpop.structjet`: this is where the jet structure functions are defined
 -   `grbpop.Ppop`: population probabilities and terms in the hierarchical Bayesian inference are computed here
 -   `grbpop.globals`: this is where some global variables are defined

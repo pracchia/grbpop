@@ -13,43 +13,63 @@ def MD14_SFH(z,a,b,zp):
     """
     return (1.+z)**a/(1.+((1.+z)/(1.+zp))**(b+a))
 
-a=2.6
-b=3.6
-zp=2.2
+def lognormal(td, mu_td, sigma_td):
+    """
+    Lognormal distribution for the time delay. The unit for the time delay is Gyr.
+    """
+    return np.exp(-((np.log(td)-np.log(mu_td))**2)/(2*sigma_td**2))/(np.sqrt(2*np.pi)*sigma_td*td)
+
+
+# Star formation history parameters (Madau & Fragos 2017)
+a = 2.6
+b = 3.6
+zp = 2.2
+
+# Setting the grid for the computation
 at = np.linspace(0,3,10)
 td_spacing = 0.01
-tdmin_max = 3.
-z_max = 11.
+tdmin_max = 3. # Max minimum time delay
+z_max = 11. # Max redshift for the distribution
+
 print('Computing grid of time delays and formation redshifts...')
+
+# Grid of time delays
 td_grid = np.arange(0,cosmo.lookback_time(1000).value,td_spacing)
+
+# Grid of redshifts corresponding to the time delays, i.e. formation redshifts
 zf = np.zeros_like(td_grid)
 zf[1:] = z_at_value(cosmo.lookback_time, td_grid[1:]*u.Gyr)
-tdmin = td_grid[td_grid<(tdmin_max + td_spacing/2)]
-tdmin = tdmin[1:]
-z = zf[zf<=z_max]
+
+# Grid of minimum time delays
+tdmin = td_grid[td_grid<(tdmin_max + td_spacing/2)] # The td_spacing/2 is to avoid array boundary problems
+tdmin = tdmin[1:] # Exclude tdmin = 0
+
+z = zf[zf<=z_max] # Redshifts for the distribution
 r_sgrb_pow = np.zeros([len(z),len(tdmin),len(at)])
+
+
 print('Computing convolutions with power-law time delay distribution...')
+
 for k in tqdm(range(len(tdmin))):
-    td_index = int(tdmin[k]/td_spacing)
+    td_index = int(tdmin[k]/td_spacing) # Array index corresponding to the minimum time delay
     for q in range(len(at)):
-        dtd_norm = np.trapz(td_grid[td_index:]**(-at[q]), td_grid[td_index:])
+        dtd_norm = np.trapz(td_grid[td_index:]**(-at[q]), td_grid[td_index:]) # Delay time distribution normalization
         for i in range(len(z)):
             if i==0:
                 td_int = td_grid[td_index:]
             else:
-                td_int = td_grid[td_index:-i]
+                td_int = td_grid[td_index:-i] # Indexing for convolution integral
             zf_index = i + td_index
-            zf_int = zf[zf_index:]
-            dtd = td_int**(-at[q])/dtd_norm
-            sfh = MD14_SFH(zf_int,a=a,b=b,zp=zp)
-            r_sgrb_pow[i][k][q] = np.trapz(sfh*dtd/(1+zf_int), td_int)
+            zf_int = zf[zf_index:] # Indexing for convolution integral
+            dtd = td_int**(-at[q])/dtd_norm # Delay time distribution
+            sfh = MD14_SFH(zf_int,a=a,b=b,zp=zp) # Star formation history
+            r_sgrb_pow[i][k][q] = np.trapz(sfh*dtd/(1+zf_int), td_int) # Convolution integral
+
+
 
 print('Computing convolutions with log-normal time delay distrbution...')
 
-def lognormal(td, mu_td, sigma_td):
-    "td in Gyr"
-    return np.exp(-((np.log(td)-np.log(mu_td))**2)/(2*sigma_td**2))/(np.sqrt(2*np.pi)*sigma_td*td)
-
+# Lognormal distribution parameters
 mu_td = np.linspace(0.001,3,25)
 sigma_td = np.linspace(0.001,3,25)
 r_sgrb_log = np.zeros([len(z),len(mu_td),len(sigma_td)])
@@ -60,11 +80,13 @@ for i in tqdm(range(len(z))):
             if i == 0:
                 td_int = td_grid[1:]
             else:
-                td_int = td_grid[1:-i]
-            zf_int = zf[(i+1):]
-            dtd = lognormal(td_int,mu_td=mu_td[k],sigma_td=sigma_td[q])
-            sfh = MD14_SFH(zf_int,a=a,b=b,zp=zp)
-            r_sgrb_log[i][k][q] = np.trapz(sfh*dtd/(1+zf_int), td_int)
+                td_int = td_grid[1:-i] # Indexing for convolution integral
+            zf_int = zf[(i+1):] # Indexing for convolution integral
+            dtd = lognormal(td_int,mu_td=mu_td[k],sigma_td=sigma_td[q]) # Delay time distribution
+            sfh = MD14_SFH(zf_int,a=a,b=b,zp=zp) # Star formation history
+            r_sgrb_log[i][k][q] = np.trapz(sfh*dtd/(1+zf_int), td_int) # Convolution integral
+
+
 
 print('Saving grids...')
 
