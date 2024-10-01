@@ -64,7 +64,7 @@ def logprior(theta_pop):
     or theta_pop['a_Ep']<0. or theta_pop['a_Ep']>6.\
     or theta_pop['b_Ep']<-3. or theta_pop['b_Ep']>6.\
     or theta_pop['A']<1.5 or theta_pop['A']>5.\
-    or theta_pop['s_c']<0.2 or theta_pop['s_c']>0.21\
+    or theta_pop['s_c']<0.2 or theta_pop['s_c']>0.3\
     or theta_pop['y']<-0.001 or theta_pop['y']>0.001\
     or theta_pop['a']<-1. or theta_pop['a']>5.\
     or theta_pop['b']<1. or theta_pop['b']>10.\
