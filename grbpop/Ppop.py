@@ -16,8 +16,8 @@ dVdz0 = 4*np.pi*cosmo.differential_comoving_volume(z0).to('Gpc3 sr-1').value
 dL0 = cosmo.luminosity_distance(z0).to('cm').value
 
 ### rho_z defined to select the density evolution model ###
-rho_z='SBPL' # Smoothly Broken Power Law. Parameters: theta_pop['a'] (slope before the peak), theta_pop['b'] (-slope after the peak) and theta_pop['zp'] (peak)
-# rho_z='DTD*SFH' # convolution between a Delay Time Distribution and a Star Formation History. Parameters: theta_pop['at'] (slope) and theta_pop['tdmin'] (minimum merger time in Gyr)
+# rho_z='SBPL' # Smoothly Broken Power Law. Parameters: theta_pop['a'] (slope before the peak), theta_pop['b'] (-slope after the peak) and theta_pop['zp'] (peak)
+rho_z='DTD*SFH' # convolution between a Delay Time Distribution and a Star Formation History. Parameters: theta_pop['at'] (slope) and theta_pop['tdmin'] (minimum merger time in Gyr)
 dtd='pow'
 # dtd='lognorm'
 
@@ -554,3 +554,193 @@ def log_poissonian_GRB_GW(theta_pop,N_obs,eta=0.59,T=11/12,logalpha=None,pflim=3
     N_det = eta*R*T*np.exp(logalpha) # Number of detections expected
     logPoisson = N_obs*np.log(N_det) - N_det
     return logPoisson
+
+
+
+### "BIASED" likelihood functions ###
+
+
+
+def biased_obsframe_loglikelihood(pf,epbias=800,alpha=-0.4,specmodel='Comp',pflim=3.5,inst='Fermi',theta_pop=default_theta_pop,res=100,pdet='gbm',return_logalpha=False):
+    """
+    Loglikelihood contribution from events with unknown redshift. 
+    
+    Parameters:
+    - pf: array of peak fluxes of the event sample, in ph cm-2 s-1, assumed to be in the 50-300 keV band and measured on a 64-ms timescale
+    - epbias: biased fixed value to consider for epeak (in keV)
+    - alpha: low-energy spectral index (scalar, mean value of the sample)
+    - specmodel: spectral model, either 'Comp' or 'Band'
+    - pflim: the sample selection photon flux cut (used only if pdet=None, in which case the sample must be complete in flux!!!)
+    - inst: the instrument that collected these data (currently only Fermi and Swift are implemented)
+    - theta_pop: dictionary specifying the population parameters
+    - res: the grid resolution for integrals
+    - pdet: this can be a function that returns the detection probability (float between 0. and 1.) as a function of the 64-ms photon flux in the 50-300 keV band and the observed Epeak. If a string, it can be 'gbm', in which case our result for Fermi/GBM (Salafia & Ravasio 2022) is used. If this is None, then the Pdet is assumed to be 0 below pflim and 1 above: in this case, the sample must be complete in flux.
+    - return_logalpha: if True, return the computed value of logalpha (i.e. the logarithm of the integral of Ppop*pdet)
+    
+    Returns the value of the loglikelihood.
+    
+    """
+    
+    
+    # construct grid (unequal axes to avoid confusing them)
+    L = np.logspace(logLmin,logLmax,res)
+    Ep = np.logspace(logEpmin,logEpmax,res+1)
+    z = np.logspace(logzmin,logzmax,res-1)
+    dL = np.interp(z,z0,dL0)
+    
+    # make 3D mesh grid
+    zg = z.reshape([1,1,len(z)])
+    Epg = Ep.reshape([len(Ep),1,1])
+    Lg = L.reshape([1,len(L),1])
+    
+    EpLz = Epg*Lg*zg
+    
+    # compute population probability distribution
+    pz = Pz(z,theta_pop)
+    Pepl = PEpL(L,Ep,theta_pop)
+    Ppop = Pepl.reshape([len(Ep),len(L),1])*pz
+    PpopEpLz = Ppop*EpLz
+    
+    # compute peak flux on the grid    
+    pf_EpLz = pflux.pflux_from_L(zg,Epg,Lg,alpha=alpha,inst=inst,model=specmodel)
+    
+    # compute ep on the grid
+    ep_EpLz = Epg/(1.+zg)
+    
+    # detection probability
+    if pdet is None:
+        Pdet = (pf_EpLz>=pflim)
+    elif pdet=='gbm':
+        Pdet = pdet_GBM(pf_EpLz,ep_EpLz)
+    else:
+        Pdet = pdet(pf_EpLz,ep_EpLz)
+    
+    # compute log(fraction of accessible population above the flux limit)
+    logalpha = np.log(np.trapz(np.trapz(np.trapz(PpopEpLz*Pdet,np.log(z),axis=2),np.log(L),axis=1),np.log(Ep),axis=0))
+    
+    # set up an interpolator of P(Ep,L | theta_pop)
+    Itp_logPEpL = RegularGridInterpolator(points=(np.log10(Ep),np.log10(L)),values=np.log10(Pepl),bounds_error=False,fill_value=-np.inf) 
+    # start computation of loglikelihood
+    logl = 0.
+    
+    for i in range(len(pf)):
+        L_pepz = pflux.L_from_phflux(z,epbias,pf[i],alpha=alpha,inst=inst,model=specmodel)
+        
+        logEpL_i = np.reshape((np.log10((1.+z)*epbias),np.log10(L_pepz)), (2, -1), order='C').T
+        logl_i = np.log(np.trapz(z*(1.+z)*L_pepz/pf[i]*np.nan_to_num(10**Itp_logPEpL(logEpL_i))*pz,np.log(z)))-logalpha
+        
+        logl += logl_i
+    
+    # if the result is not finite, return -np.inf
+    if np.isfinite(logl):
+        if return_logalpha:
+            return logl,logalpha
+        else:
+            return logl
+    else:
+        if return_logalpha:
+            return -np.inf,logalpha
+        else:
+            return -np.inf
+
+
+def biased_restframe_loglikelihood(Lobs,zobs,epbias,alpha=-0.4,specmodel='Comp',pflim=[None,3.5],inst='Fermi+Swift',theta_pop=default_theta_pop,res=100,pdet=None,logalpha=None,prior_EpLz=None,return_logalpha=False):
+    """
+    Loglikelihood contribution from events with a redshift measurement. 
+    
+    Parameters:
+    - Lobs: array of posterior samples of peak luminosities, in erg/s, shape (N_events,N_samples).
+    - zobs: array of posterior samples of redshift, shape (N_events,N_samples).
+    - epbias: biased fixed value to consider for epeak (in keV).
+    - alpha: low-energy spectral index (scalar, mean value of the sample)
+    - specmodel: spectral model, either 'Comp' or 'Band'
+    - pflim: the sample selection photon flux cut (the sample must be complete in flux above this cut, unless Pdet is given - see below)
+    - inst: the instrument that collected these data (currently only Fermi and Swift are implemented)
+    - theta_pop: dictionary specifying the population parameters
+    - res: the grid resolution for integrals
+    - pdet: this can be a function that returns the detection probability (float between 0. and 1.) as a function of the 64-ms photon flux in the 50-300 keV band and the observed Epeak. If a string, it can be 'gbm', in which case our result (Salafia, Ravasio, Ghirlanda & Mandel 2023) is used. If this is None, then the Pdet is assumed to be 0 below pflim and 1 above: in this case, the sample must be complete in flux.
+    - logalpha: if given, this is assumed to be the logarithm of the integral of Ppop*pdet, in which case its computation is avoided (to improve performance).
+    - prior_EpLz: if given, this is assumed to yield the prior on Ep, L and z, pi(Ep,L,z). If not given, the prior is assumed uniform on both variables. 
+    - return_logalpha: if True, return logalpha.
+    
+    Returns the value of the loglikelihood.
+    
+    """
+    
+    # make grid & mesh grid
+    L = np.logspace(logLmin,logLmax,res)
+    Ep = np.logspace(logEpmin,logEpmax,res+1)
+    z = np.logspace(logzmin,logzmax,res-1)
+    
+    zg = np.copy(z).reshape([1,1,len(z)])
+    Epg = np.copy(Ep).reshape([len(Ep),1,1])
+    Lg = np.copy(L).reshape([1,len(L),1])
+        
+    # compute Ppop over the grid, and at the redshifts of the events with a known redshift
+    Pepl = PEpL(L,Ep,theta_pop)
+        
+    # if logalpha is not given, compute it
+    if logalpha is None:
+
+        # compute Ppop over the grid
+        Ppop = Pepl.reshape([len(Ep),len(L),1])*Pz(z,theta_pop) # full grid
+        EpLz = Epg*Lg*zg
+        PpopEpLz = Ppop*EpLz
+                
+        # peak photon flux on the grid & conditioned on the known redshifts
+        if inst=='Fermi+Swift':
+            pfGBM_EpLz = pflux.pflux_from_L(zg,Epg,Lg,alpha=alpha,model=specmodel,inst='Fermi')
+            pfBAT_EpLz = pflux.pflux_from_L(zg,Epg,Lg,alpha=alpha,model=specmodel,inst='Swift')
+        else:
+            pf_EpLz = pflux.pflux_from_L(zg,Epg,Lg,alpha=alpha,model=specmodel,inst=inst)
+        
+        ep_EpLz = Epg/(1.+zg)
+        
+        if pdet is not None:
+            if pdet=='gbm':
+                if inst=='Fermi+Swift':
+                    Pdet = pdet_GBM(pfGBM_EpLz,ep_EpLz)*(pfBAT_EpLz>pflim[1])
+                else:
+                    Pdet = pdet_GBM(pf_EpLz,ep_EpLz)
+            else:
+                Pdet = pdet(pf_EpLz,ep_EpLz)
+        else:
+            if not inst=='Fermi+Swift':
+                pf_EpLz = pflux.pflux_from_L(zg,Epg,Lg,alpha=alpha,model=specmodel,inst=inst)
+                Pdet = (pf_EpLz>=pflim)
+            else:
+                Pdet = (pfGBM_EpLz>=pflim[0])&(pfBAT_EpLz>=pflim[1])
+    
+        # log(fraction of accessible events)
+        logalpha = np.log(np.trapz(np.trapz(np.trapz(PpopEpLz*Pdet,np.log(z),axis=2),np.log(L),axis=1),np.log(Ep),axis=0))
+        
+        
+    # compute loglikelihood
+    logl = 0.
+    
+    # use posterior samples
+    Itp_logPEpL = RegularGridInterpolator(points=(np.log10(Ep),np.log10(L)),values=np.log10(Pepl),bounds_error=False,fill_value=-np.inf) # set up an interpolator of P(Ep,L | theta_pop)
+    for i in range(Lobs.shape[0]):
+        logEpL_i = np.reshape((np.log10(epbias/(1+zobs[i])),np.log10(Lobs[i])), (2, -1), order='C').T # turn posterior samples into an array of (Ep,L) 2D points
+        if prior_EpLz is None:
+            logl_i = np.log(np.mean(10**Itp_logPEpL(logEpL_i)*Pz(zobs[i],theta_pop))) - logalpha
+        else:
+            logl_i = np.log(np.mean(10**Itp_logPEpL(logEpL_i)*Pz(zobs[i],theta_pop)/prior_EpLz(epbias/(1+zobs[i]),Lobs[i],zobs[i]))) - logalpha
+        logl += logl_i
+    
+    # if the result is not finite, return -np.inf
+    if np.isfinite(logl):
+        if return_logalpha:
+            return logl,logalpha
+        else:
+            return logl
+    else:
+        if return_logalpha:
+            return -np.inf,logalpha
+        else:
+            return -np.inf
+
+
+
+
+
