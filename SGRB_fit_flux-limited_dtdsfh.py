@@ -49,6 +49,8 @@ thvs = rng.choice(thv17,Nsamples,p=w/np.sum(w))
 alpha=-0.4
 
 
+
+
 def logprior(theta_pop): ### OK
     """
     log prior 
@@ -65,10 +67,10 @@ def logprior(theta_pop): ### OK
     or theta_pop['A']<1.5 or theta_pop['A']>5.\
     or theta_pop['s_c']<0.3 or theta_pop['s_c']>3.\
     or theta_pop['y']<-3. or theta_pop['y']>3.\
+    or theta_pop['mu_td']<0.001 or theta_pop['mu_td']>3.\
+    or theta_pop['sigma_td']<0.001 or theta_pop['sigma_td']>3.:
     # or theta_pop['tdmin']<0.01 or theta_pop['tdmin']>3.\ ### 'dtd':'pow'
     # or theta_pop['at']<0. or theta_pop['at']>3.: ### 'dtd':'pow'
-    or theta_pop['mu_td']<0.001 or theta_pop['mu_td']>3.\ ### 'dtd':'lognorm'
-    or theta_pop['sigma_td']<0.001 or theta_pop['sigma_td']>3.: ### 'dtd':'lognorm'
         return -np.inf
     else:
         return np.log(theta_pop['thc']) + np.log(np.sin(theta_pop['thc'])) + np.log(theta_pop['thw']) + np.log(np.sin(theta_pop['thw'])) # "isotropic" prior on angles
@@ -81,7 +83,6 @@ def loglike(x): ### OK
     # smooth double power law jet model
     theta_pop = {'jetmodel':'smooth double power law',
              'rho_z':'DTD*SFH',
-             # 'dtd':'pow',
              'dtd':'lognorm',
              'thc':10**x[0],
              'Lc*':10.**x[1],
@@ -94,11 +95,12 @@ def loglike(x): ### OK
              'A':x[8],
              's_c':10.**x[9],
              'y':x[10],
-             # 'tdmin':x[11], ### 'dtd':'pow'
-             'mu_td':x[11], ### 'dtd':'lognorm'
-             # 'at':x[12] ### 'dtd':'pow'
-             'sigma_td':x[12] ### 'dtd':'lognorm'
+             'mu_td':x[11],
+             'sigma_td':x[12]
              }
+             # 'dtd':'pow',
+             # 'tdmin':x[11], 
+             # 'at':x[12]
     
     pi_EpLz = lambda Epx,Lx,zx:Lx**-1*(1.+zx)**-1 # Ep,L,z prior from spectral analysis
     pdet = lambda pf,ep: (pf>3.5)*(ep<1e4)*(ep>50.) # detection probability for flux-limited sample analysis
@@ -133,7 +135,7 @@ if __name__=='__main__':
     nthreads = 8
     N_iter = 10000
     # chain_filename = 'chains/SGRB_flux-limited-sample-analysis_dtdsfh_pow.h5' # full
-    chain_filename = 'chains/SGRB_flux-limited-sample-analysis_dtdsfh_lognorm.h5' # full
+    chain_filename = 'chains/SGRB_flux-limited-sample-analysis_dtdsfh_log.h5' # full
     
     # initial guess vector for 'dtd':'pow'
     #      log(thj)  log(Lj) a_L      b_L   log(Epj) a_Ep    b_Ep  log(thw)  A       log(s_c)    y    tdmin at   

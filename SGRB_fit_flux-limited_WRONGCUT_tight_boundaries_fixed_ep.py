@@ -57,16 +57,16 @@ def logprior(theta_pop):
     log prior 
     """
     if theta_pop['thc']<0.01 or theta_pop['thc']>(np.pi/2.)\
-    or theta_pop['Lc*']<3e51 or theta_pop['Lc*']>1e55\
-    or theta_pop['Epc*']<799. or theta_pop['Epc*']>801.\
+    or theta_pop['Lc*']<5e49 or theta_pop['Lc*']>1e55\
+    or theta_pop['Epc*']<1e2 or theta_pop['Epc*']>1e5\
     or theta_pop['thw']<theta_pop['thc'] or theta_pop['thw']>np.pi/2.\
     or theta_pop['a_L']<0. or theta_pop['a_L']>6.\
     or theta_pop['b_L']<-3. or theta_pop['b_L']>6.\
     or theta_pop['a_Ep']<0. or theta_pop['a_Ep']>6.\
     or theta_pop['b_Ep']<-3. or theta_pop['b_Ep']>6.\
     or theta_pop['A']<1.5 or theta_pop['A']>5.\
-    or theta_pop['s_c']<0.3 or theta_pop['s_c']>1.\
-    or theta_pop['y']<-0.001 or theta_pop['y']>0.001\
+    or theta_pop['s_c']<0.3 or theta_pop['s_c']>3.\
+    or theta_pop['y']<-0.3 or theta_pop['y']>0.3\
     or theta_pop['a']<-1. or theta_pop['a']>5.\
     or theta_pop['b']<1. or theta_pop['b']>10.\
     or theta_pop['zp']<0.1 or theta_pop['zp']>3.:
@@ -133,7 +133,7 @@ if __name__=='__main__':
     
     # initial guess vector
     #      log(thj)  log(Lj) a_L      b_L   log(Epj) a_Ep    b_Ep  log(thw)     A    log(s_c)        y        a      b    zp    
-    x0 = [-1.877,     51.55, 4.091, -2.318, 2.903,    1.2,   2.069, -0.5058, 3.041, -0.5086, 0.000149, 1.431, 4.623,  0.9]  # starting guess
+    x0 = [-1.877,     50.01, 1.501, 1.691, 2.903,    0.08,   0.369, 0.00058, 2.941, -0.5086,  0.000149,   3.771, 8.293,  0.4]  # starting guess
     
     # as a cross check
     print('Log likelihood at starting guess: ',loglike(x0))

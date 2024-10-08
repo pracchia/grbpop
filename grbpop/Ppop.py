@@ -16,8 +16,8 @@ dVdz0 = 4*np.pi*cosmo.differential_comoving_volume(z0).to('Gpc3 sr-1').value
 dL0 = cosmo.luminosity_distance(z0).to('cm').value
 
 ### rho_z defined to select the density evolution model ###
-# rho_z='SBPL' # Smoothly Broken Power Law. Parameters: theta_pop['a'] (slope before the peak), theta_pop['b'] (-slope after the peak) and theta_pop['zp'] (peak)
-rho_z='DTD*SFH' # convolution between a Delay Time Distribution and a Star Formation History. Parameters: theta_pop['at'] (slope) and theta_pop['tdmin'] (minimum merger time in Gyr)
+rho_z='SBPL' # Smoothly Broken Power Law. Parameters: theta_pop['a'] (slope before the peak), theta_pop['b'] (-slope after the peak) and theta_pop['zp'] (peak)
+# rho_z='DTD*SFH' # convolution between a Delay Time Distribution and a Star Formation History. Parameters: theta_pop['at'] (slope) and theta_pop['tdmin'] (minimum merger time in Gyr)
 dtd='pow'
 # dtd='lognorm'
 

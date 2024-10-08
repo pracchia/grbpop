@@ -8,7 +8,6 @@ from grbpop.pdet import pdet_GBM
 import emcee
 from multiprocessing import Pool
 
-
 # load SGRB data from GBM catalog to construct observer frame sample
 gbm = pandas.read_csv('grb_data/GBM_pflx_allinfo.csv')
 sgrb = gbm.loc[gbm['t90']<2]
@@ -48,7 +47,6 @@ thvs = rng.choice(thv17,Nsamples,p=w/np.sum(w))
 # set low-energy photon index to the median of the GBM sample
 alpha=-0.4
 
-
 def logprior(theta_pop):
     """
     log prior 
@@ -67,11 +65,10 @@ def logprior(theta_pop):
     or theta_pop['y']<-3. or theta_pop['y']>3.\
     or theta_pop['a']<-1. or theta_pop['a']>5.\
     or theta_pop['b']<1. or theta_pop['b']>10.\
-    or theta_pop['zp']<0.1 or theta_pop['zp']>3.\
-    or theta_pop['R0']<1. or theta_pop['R0']>1e6:
+    or theta_pop['zp']<0.1 or theta_pop['zp']>3.:
         return -np.inf
     else:
-        return np.log(theta_pop['R0']) + np.log(theta_pop['thc']) + np.log(np.sin(theta_pop['thc'])) + np.log(theta_pop['thw']) + np.log(np.sin(theta_pop['thw'])) # "isotropic" prior on angles
+        return np.log(theta_pop['thc']) + np.log(np.sin(theta_pop['thc'])) + np.log(theta_pop['thw']) + np.log(np.sin(theta_pop['thw'])) # "isotropic" prior on angles
 
 def loglike(x):
     """
@@ -94,8 +91,7 @@ def loglike(x):
              'y':x[10],
              'a':x[11],
              'b':x[12],
-             'zp':x[13],
-             'R0':10**x[14]
+             'zp':x[13]
              }
     
     pi_EpLz = lambda Epx,Lx,zx:Lx**-1*(1.+zx)**-1 # Ep,L,z prior from spectral analysis
@@ -110,21 +106,16 @@ def loglike(x):
     # evaluate log likelihood
     
     ## observer frame sample
-    logl_obsframe, log_alpha_obsframe = grbpop.Ppop.obsframe_loglikelihood(p50300,ep,alpha=alpha,specmodel='Comp',inst='Fermi',theta_pop=theta_pop,res=80,pdet=pdet,pflim=None,return_logalpha=True)
+    logl_obsframe = grbpop.Ppop.obsframe_loglikelihood(p50300,ep,alpha=alpha,specmodel='Comp',inst='Fermi',theta_pop=theta_pop,res=80,pdet=pdet,pflim=None,return_logalpha=False)
     
     ## restframe sample
     logl_restframe = grbpop.Ppop.restframe_loglikelihood(Lsamples[:-1],Epsamples[:-1],zobs[:-1],alpha=alpha,inst='Fermi+Swift',theta_pop=theta_pop,specmodel='Comp',pdet='gbm',pflim=[None,3.5],prior_EpLz=pi_EpLz,logalpha=None,res=60)
     
     ## viewing angle sample
-    log_alpha_GRB_GW = grbpop.Ppop.logalpha_GRB_GW(theta_pop,pdet_GW='O3')
-    logl_GW170817 = grbpop.Ppop.known_theta_view_loglikelihood(Lsamples[-1],Epsamples[-1],thvs,theta_pop,prior_EpLz=pi_EpLz) + np.log(grbpop.Ppop.Pz(zobs[-1][0],theta_pop=theta_pop))-log_alpha_GRB_GW
-
-    ## Poissonian terms
-    log_poisson_obsframe = grbpop.Ppop.log_poissonian_observer(theta_pop,N_obs=len(p50300),logalpha=log_alpha_obsframe,alpha=alpha,specmodel='Comp',inst='Fermi',res=80,pdet=pdet,pflim=None)
-    log_poisson_GW170817 = grbpop.Ppop.log_poissonian_GRB_GW(theta_pop,N_obs=1,logalpha=log_alpha_GRB_GW,pdet_GW='O3')
+    logl_GW170817 = grbpop.Ppop.known_theta_view_loglikelihood(Lsamples[-1],Epsamples[-1],thvs,theta_pop,prior_EpLz=pi_EpLz) + np.log(grbpop.Ppop.Pz(zobs[-1][0],theta_pop=theta_pop))-grbpop.Ppop.logalpha_GRB_GW(theta_pop,pdet_GW='O3')
     
     ## sum all contributions
-    logl = logl_obsframe + logl_restframe + logl_GW170817 + log_poisson_obsframe + log_poisson_GW170817
+    logl = logl_obsframe + logl_restframe + logl_GW170817
     
     if np.isfinite(logl + lpr):
         return logl + logprior(theta_pop)
@@ -135,11 +126,11 @@ def loglike(x):
 if __name__=='__main__':
     nthreads = 8
     N_iter = 10000
-    chain_filename = 'chains/SGRB_full-sample-analysis.h5' # full
+    chain_filename = 'chains/SGRB_full-sample-analysis_OG_lowlum.h5' # full
     
     # initial guess vector
-    #      log(thj)  log(Lj) a_L      b_L   log(Epj) a_Ep    b_Ep  log(thw)  A       log(s_c)   y       a      b      zp   log(R0)
-    x0 = [-1.15,     49.61, 4.091, -2.318,  3.97,   1.95,   2.069,  0.0758, 2.71,  -0.01476, -0.1149, 4.631, 4.623, 2.351, 4.48]  # starting guess
+    #      log(thj)  log(Lj) a_L      b_L   log(Epj) a_Ep    b_Ep  log(thw)  A       log(s_c)   y       a      b      zp    
+    x0 = [-1.877,     51.55, 4.091, -2.318, 3.804,    1.2,   2.069, -0.5058, 3.041, -0.01476, -0.1149, 4.431, 4.623, 2.051]  # starting guess
     
     # as a cross check
     print('Log likelihood at starting guess: ',loglike(x0))

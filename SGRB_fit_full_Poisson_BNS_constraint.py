@@ -68,7 +68,7 @@ def logprior(theta_pop):
     or theta_pop['a']<-1. or theta_pop['a']>5.\
     or theta_pop['b']<1. or theta_pop['b']>10.\
     or theta_pop['zp']<0.1 or theta_pop['zp']>3.\
-    or theta_pop['R0']<1. or theta_pop['R0']>1e6:
+    or theta_pop['R0']<5. or theta_pop['R0']>920.:
         return -np.inf
     else:
         return np.log(theta_pop['R0']) + np.log(theta_pop['thc']) + np.log(np.sin(theta_pop['thc'])) + np.log(theta_pop['thw']) + np.log(np.sin(theta_pop['thw'])) # "isotropic" prior on angles
@@ -135,11 +135,11 @@ def loglike(x):
 if __name__=='__main__':
     nthreads = 8
     N_iter = 10000
-    chain_filename = 'chains/SGRB_full-sample-analysis.h5' # full
+    chain_filename = 'chains/SGRB_full-sample-analysis_poisson_bnsrateconstraint.h5' # full
     
     # initial guess vector
     #      log(thj)  log(Lj) a_L      b_L   log(Epj) a_Ep    b_Ep  log(thw)  A       log(s_c)   y       a      b      zp   log(R0)
-    x0 = [-1.15,     49.61, 4.091, -2.318,  3.97,   1.95,   2.069,  0.0758, 2.71,  -0.01476, -0.1149, 4.631, 4.623, 2.351, 4.48]  # starting guess
+    x0 = [-1.877,     51.55, 4.091, -2.318, 3.804,    1.2,   2.069, -0.5058, 3.041, -0.01476, -0.1149, 4.431, 4.623, 2.051, 2.33]  # starting guess
     
     # as a cross check
     print('Log likelihood at starting guess: ',loglike(x0))
