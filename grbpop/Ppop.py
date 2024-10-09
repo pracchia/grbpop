@@ -721,11 +721,11 @@ def biased_restframe_loglikelihood(Lobs,zobs,epbias,alpha=-0.4,specmodel='Comp',
     # use posterior samples
     Itp_logPEpL = RegularGridInterpolator(points=(np.log10(Ep),np.log10(L)),values=np.log10(Pepl),bounds_error=False,fill_value=-np.inf) # set up an interpolator of P(Ep,L | theta_pop)
     for i in range(Lobs.shape[0]):
-        logEpL_i = np.reshape((np.log10(epbias),np.log10(Lobs[i])), (2, -1), order='C').T # turn posterior samples into an array of (Ep,L) 2D points
+        logEpL_i = np.reshape((np.log10(np.zeros_like(zobs[i])+epbias),np.log10(Lobs[i])), (2, -1), order='C').T # turn posterior samples into an array of (Ep,L) 2D points
         if prior_EpLz is None:
             logl_i = np.log(np.mean(10**Itp_logPEpL(logEpL_i)*Pz(zobs[i],theta_pop))) - logalpha
         else:
-            logl_i = np.log(np.mean(10**Itp_logPEpL(logEpL_i)*Pz(zobs[i],theta_pop)/prior_EpLz(epbias,Lobs[i],zobs[i]))) - logalpha
+            logl_i = np.log(np.mean(10**Itp_logPEpL(logEpL_i)*Pz(zobs[i],theta_pop)/prior_EpLz(np.zeros_like(zobs[i])+epbias,Lobs[i],zobs[i]))) - logalpha
         logl += logl_i
     
     # if the result is not finite, return -np.inf
