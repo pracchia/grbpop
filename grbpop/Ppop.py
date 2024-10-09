@@ -563,11 +563,11 @@ def log_poissonian_GRB_GW(theta_pop,N_obs,eta=0.59,T=11/12,logalpha=None,pflim=3
 
 def biased_obsframe_loglikelihood(pf,epbias=800,alpha=-0.4,specmodel='Comp',pflim=3.5,inst='Fermi',theta_pop=default_theta_pop,res=100,pdet='gbm',return_logalpha=False):
     """
-    Loglikelihood contribution from events with unknown redshift. 
+    Loglikelihood contribution from events with unknown redshift. The value for Epeak in the source frame is fixed to study the effects of this bias.
     
     Parameters:
     - pf: array of peak fluxes of the event sample, in ph cm-2 s-1, assumed to be in the 50-300 keV band and measured on a 64-ms timescale
-    - epbias: biased fixed value to consider for epeak (in keV)
+    - epbias: biased fixed value to consider for epeak (source frame, in keV)
     - alpha: low-energy spectral index (scalar, mean value of the sample)
     - specmodel: spectral model, either 'Comp' or 'Band'
     - pflim: the sample selection photon flux cut (used only if pdet=None, in which case the sample must be complete in flux!!!)
@@ -624,9 +624,9 @@ def biased_obsframe_loglikelihood(pf,epbias=800,alpha=-0.4,specmodel='Comp',pfli
     logl = 0.
     
     for i in range(len(pf)):
-        L_pepz = pflux.L_from_phflux(z,epbias,pf[i],alpha=alpha,inst=inst,model=specmodel)
+        L_pepz = pflux.L_from_phflux_biased_ep(z,epbias,pf[i],alpha=alpha,inst=inst,model=specmodel)
         
-        logEpL_i = np.reshape((np.log10((1.+z)*epbias),np.log10(L_pepz)), (2, -1), order='C').T
+        logEpL_i = np.reshape((np.log10(np.zeros_like(z)+epbias),np.log10(L_pepz)), (2, -1), order='C').T
         logl_i = np.log(np.trapz(z*(1.+z)*L_pepz/pf[i]*np.nan_to_num(10**Itp_logPEpL(logEpL_i))*pz,np.log(z)))-logalpha
         
         logl += logl_i
@@ -646,12 +646,12 @@ def biased_obsframe_loglikelihood(pf,epbias=800,alpha=-0.4,specmodel='Comp',pfli
 
 def biased_restframe_loglikelihood(Lobs,zobs,epbias,alpha=-0.4,specmodel='Comp',pflim=[None,3.5],inst='Fermi+Swift',theta_pop=default_theta_pop,res=100,pdet=None,logalpha=None,prior_EpLz=None,return_logalpha=False):
     """
-    Loglikelihood contribution from events with a redshift measurement. 
+    Loglikelihood contribution from events with a redshift measurement. The value for Epeak in the source frame is fixed to study the effects of this bias.
     
     Parameters:
     - Lobs: array of posterior samples of peak luminosities, in erg/s, shape (N_events,N_samples).
     - zobs: array of posterior samples of redshift, shape (N_events,N_samples).
-    - epbias: biased fixed value to consider for epeak (in keV).
+    - epbias: biased fixed value to consider for epeak (source frame, in keV).
     - alpha: low-energy spectral index (scalar, mean value of the sample)
     - specmodel: spectral model, either 'Comp' or 'Band'
     - pflim: the sample selection photon flux cut (the sample must be complete in flux above this cut, unless Pdet is given - see below)
@@ -721,11 +721,11 @@ def biased_restframe_loglikelihood(Lobs,zobs,epbias,alpha=-0.4,specmodel='Comp',
     # use posterior samples
     Itp_logPEpL = RegularGridInterpolator(points=(np.log10(Ep),np.log10(L)),values=np.log10(Pepl),bounds_error=False,fill_value=-np.inf) # set up an interpolator of P(Ep,L | theta_pop)
     for i in range(Lobs.shape[0]):
-        logEpL_i = np.reshape((np.log10(epbias/(1+zobs[i])),np.log10(Lobs[i])), (2, -1), order='C').T # turn posterior samples into an array of (Ep,L) 2D points
+        logEpL_i = np.reshape((np.log10(epbias),np.log10(Lobs[i])), (2, -1), order='C').T # turn posterior samples into an array of (Ep,L) 2D points
         if prior_EpLz is None:
             logl_i = np.log(np.mean(10**Itp_logPEpL(logEpL_i)*Pz(zobs[i],theta_pop))) - logalpha
         else:
-            logl_i = np.log(np.mean(10**Itp_logPEpL(logEpL_i)*Pz(zobs[i],theta_pop)/prior_EpLz(epbias/(1+zobs[i]),Lobs[i],zobs[i]))) - logalpha
+            logl_i = np.log(np.mean(10**Itp_logPEpL(logEpL_i)*Pz(zobs[i],theta_pop)/prior_EpLz(epbias,Lobs[i],zobs[i]))) - logalpha
         logl += logl_i
     
     # if the result is not finite, return -np.inf

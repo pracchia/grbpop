@@ -99,3 +99,33 @@ def L_from_phflux(z,ep,pf,alpha=-0.5,model='Comp',inst='Fermi'):
         return 4*np.pi*dL**2*pf*k
 
 
+def L_from_phflux_biased_ep(z,epbias,pf,alpha=-0.5,model='Comp',inst='Fermi'):
+    if not np.isscalar(z):
+        Ep = np.zeros_like(z)+epbias
+    else:
+        Ep = epbias
+    
+    Ep = np.zeros_like(z)+epbias
+    dL = np.interp(z,z0,dL0)
+    
+    if not np.isscalar(z):
+        zEp_mesh = np.broadcast_arrays(np.log10(z),np.log10(Ep),alpha)
+        
+        zEp_list = np.reshape(zEp_mesh, (3, -1), order='C').T
+    else:
+        zEp_list = np.array([np.log10(z),np.log10(Ep),alpha])
+
+    if inst=='Fermi':
+        if model=='Comp':
+            k = np.nan_to_num(10**Itp_k_Fermi_Comp(zEp_list))
+        else:
+            k = np.nan_to_num(10**Itp_k_Fermi_Band(zEp_list))
+    elif inst=='Swift':
+        if model=='Comp':
+            k = np.nan_to_num(10**Itp_k_Swift_Comp(zEp_list))
+        else:
+            k = np.nan_to_num(10**Itp_k_Swift_Band(zEp_list))
+    if not np.isscalar(z):
+        return 4*np.pi*dL**2*pf*k.reshape(zEp_mesh[0].shape)
+    else:
+        return 4*np.pi*dL**2*pf*k
