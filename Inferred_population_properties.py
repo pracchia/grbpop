@@ -43,13 +43,20 @@ def psi_wp15(z):
 recompute = True
 # recompute = False
 
+# If the chain contains R0, set 'Poisson = True'. Otherwise, set 'Poisson = False' and compute R0.
+Poisson = True
+# Poisson = False
+
 suffix = '' 
 
+chain = 'chains/SGRB_full_Poisson_dtdsfh_pow.h5'
 # chain = 'chains/SGRB_full-sample-analysis_dtdsfh_log.h5'
-chain = 'chains/SGRB_full-sample-analysis_dtdsfh.h5'
+# chain = 'chains/SGRB_full-sample-analysis_dtdsfh.h5'
 # chain = 'chains/SGRB_full-sample-analysis.h5'
+
+chain2 = 'chains/SGRB_flux-limited-sample-analysis_Poisson_WRONGCUT_dtdsfh_pow_tight_boundaries.h5'
 # chain2 = 'chains/SGRB_flux-limited-sample-analysis_dtdsfh_log.h5'
-chain2 = 'chains/SGRB_flux-limited-sample-analysis_dtdsfh.h5'
+# chain2 = 'chains/SGRB_flux-limited-sample-analysis_dtdsfh.h5'
 # chain2 = 'chains/SGRB_flux-limited-sample-analysis.h5'
 specmodel = 'Comp'
 alpha = -0.4
@@ -64,7 +71,8 @@ thin = 3
 x,ll = read_chain(chain,burnin_fraction=0.5,thin=thin)
 
 if chain2 is not None:
-    x2,ll2 = read_chain(chain2,burnin_fraction=0.25,thin=thin)
+    x2,ll2 = read_chain(chain2,burnin_fraction=0.5,thin=thin)
+    # x2,ll2 = read_chain(chain2,burnin_fraction=0.25,thin=thin)
     N2 = N
 
 
@@ -89,9 +97,9 @@ if recompute:
     rhoz_grid_pow = np.load(os.path.join(here,'grbpop/dtd_sfh_conv_tables/r_sgrb_pow.npy'))
     Itp_rhoz_pow = RegularGridInterpolator(points=(np.log10(z_grid),tdmin_grid,at_grid),values=np.nan_to_num(rhoz_grid_pow),bounds_error=False)
     
-    mu_td_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/mu_td.npy'))
-    sigma_td_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/sigma_td.npy'))
-    rhoz_grid_log = np.load(os.path.join(here,'dtd_sfh_conv_tables/r_sgrb_log.npy'))
+    mu_td_grid = np.load(os.path.join(here,'grbpop/dtd_sfh_conv_tables/mu_td.npy'))
+    sigma_td_grid = np.load(os.path.join(here,'grbpop/dtd_sfh_conv_tables/sigma_td.npy'))
+    rhoz_grid_log = np.load(os.path.join(here,'grbpop/dtd_sfh_conv_tables/r_sgrb_log.npy'))
     Itp_rhoz_log = RegularGridInterpolator(points=(np.log10(z_grid),mu_td_grid,sigma_td_grid),values=np.nan_to_num(rhoz_grid_log),bounds_error=False)
 
     R0 = np.zeros(N)
@@ -112,25 +120,27 @@ if recompute:
     for i in range(N):
         print('Sample {0:d}/{1:d} ...   '.format(i,N),end='\r')
                 
-        # theta_pop = {'jetmodel':'smooth double power law',
-        #      'rho_z':'SBPL',
-        #      'thc':10**x[i,0],
-        #      'Lc*':10**x[i,1],
-        #      'a_L':x[i,2],
-        #      'b_L':x[i,3],
-        #      'Epc*':10**x[i,4],
-        #      'a_Ep':x[i,5],
-        #      'b_Ep':x[i,6],
-        #      'thw':10**x[i,7],
-        #      'A':x[i,8],
-        #      's_c':10**x[i,9],
-        #      'y':x[i,10],
-        #      'a':x[i,11],
-        #      'b':x[i,12],
-        #      'zp':x[i,13]
-        #      }
 
-        theta_pop = {'jetmodel':'smooth double power law',
+        if Poisson:
+            # theta_pop = {'jetmodel':'smooth double power law',
+            #  'rho_z':'SBPL',
+            #  'thc':10**x[i,0],
+            #  'Lc*':10**x[i,1],
+            #  'a_L':x[i,2],
+            #  'b_L':x[i,3],
+            #  'Epc*':10**x[i,4],
+            #  'a_Ep':x[i,5],
+            #  'b_Ep':x[i,6],
+            #  'thw':10**x[i,7],
+            #  'A':x[i,8],
+            #  's_c':10**x[i,9],
+            #  'y':x[i,10],
+            #  'a':x[i,11],
+            #  'b':x[i,12],
+            #  'zp':x[i,13],
+            #  'R0':10**x[i,14]
+            #  }
+            theta_pop = {'jetmodel':'smooth double power law',
              'rho_z':'DTD*SFH',
              'dtd':'pow',
              'thc':10**x[i,0],
@@ -145,7 +155,8 @@ if recompute:
              's_c':10**x[i,9],
              'y':x[i,10],
              'tdmin':x[i,11],
-             'at':x[i,12]
+             'at':x[i,12],
+             'R0':10**x[i,13]
              }
              # 'dtd':'lognorm',
              # 'mu_td':x[i,11],
@@ -153,48 +164,134 @@ if recompute:
              # 'dtd':'pow',
              # 'tdmin':x[i,11],
              # 'at':x[i,12]
+
+            if chain2 is not None:
+                # theta_pop2 = {'jetmodel':'smooth double power law',
+                #  'rho_z':'SBPL',
+                #  'thc':10**x2[i,0],
+                #  'Lc*':10**x2[i,1],
+                #  'a_L':x2[i,2],
+                #  'b_L':x2[i,3],
+                #  'Epc*':10**x2[i,4],
+                #  'a_Ep':x2[i,5],
+                #  'b_Ep':x2[i,6],
+                #  'thw':10**x2[i,7],
+                #  'A':x2[i,8],
+                #  's_c':10**x2[i,9],
+                #  'y':x2[i,10],
+                #  'a':x2[i,11],
+                #  'b':x2[i,12],
+                #  'zp':x2[i,13],
+                #  'R0':10**x2[i,14]
+                # }
+                theta_pop2 = {'jetmodel':'smooth double power law',
+                 'rho_z':'DTD*SFH',
+                 'dtd':'pow',
+                 'thc':10**x2[i,0],
+                 'Lc*':10**x2[i,1],
+                 'a_L':x2[i,2],
+                 'b_L':x2[i,3],
+                 'Epc*':10**x2[i,4],
+                 'a_Ep':x2[i,5],
+                 'b_Ep':x2[i,6],
+                 'thw':10**x2[i,7],
+                 'A':x2[i,8],
+                 's_c':10**x2[i,9],
+                 'y':x2[i,10],
+                 'tdmin':x2[i,11],
+                 'at':x2[i,12],
+                 'R0':10**x2[i,13]
+                }
+                 # 'dtd':'lognorm',
+                 # 'mu_td':x2[i,11],
+                 # 'sigma_td':x2[i,12]
+                 # 'dtd':'pow',
+                 # 'tdmin':x2[i,11],
+                 # 'at':x2[i,12]
         
-        if chain2 is not None:
-        #     theta_pop2 = {'jetmodel':'smooth double power law',
-        #      'rho_z':'SBPL',
-        #      'thc':10**x2[i,0],
-        #      'Lc*':10**x2[i,1],
-        #      'a_L':x2[i,2],
-        #      'b_L':x2[i,3],
-        #      'Epc*':10**x2[i,4],
-        #      'a_Ep':x2[i,5],
-        #      'b_Ep':x2[i,6],
-        #      'thw':10**x2[i,7],
-        #      'A':x2[i,8],
-        #      's_c':10**x2[i,9],
-        #      'y':x2[i,10],
-        #      'a':x2[i,11],
-        #      'b':x2[i,12],
-        #      'zp':x2[i,13]
-        #     }
-            theta_pop2 = {'jetmodel':'smooth double power law',
-             'rho_z':'DTD*SFH',
-             'dtd':'pow',
-             'thc':10**x2[i,0],
-             'Lc*':10**x2[i,1],
-             'a_L':x2[i,2],
-             'b_L':x2[i,3],
-             'Epc*':10**x2[i,4],
-             'a_Ep':x2[i,5],
-             'b_Ep':x2[i,6],
-             'thw':10**x2[i,7],
-             'A':x2[i,8],
-             's_c':10**x2[i,9],
-             'y':x2[i,10],
-             'tdmin':x2[i,11],
-             'at':x2[i,12]
-            }
-             # 'dtd':'lognorm',
-             # 'mu_td':x[i,11],
-             # 'sigma_td':x[i,12]
-             # 'dtd':'pow',
-             # 'tdmin':x[i,11],
-             # 'at':x[i,12]
+        else:
+            # theta_pop = {'jetmodel':'smooth double power law',
+            #      'rho_z':'SBPL',
+            #      'thc':10**x[i,0],
+            #      'Lc*':10**x[i,1],
+            #      'a_L':x[i,2],
+            #      'b_L':x[i,3],
+            #      'Epc*':10**x[i,4],
+            #      'a_Ep':x[i,5],
+            #      'b_Ep':x[i,6],
+            #      'thw':10**x[i,7],
+            #      'A':x[i,8],
+            #      's_c':10**x[i,9],
+            #      'y':x[i,10],
+            #      'a':x[i,11],
+            #      'b':x[i,12],
+            #      'zp':x[i,13]
+            #      }
+            theta_pop = {'jetmodel':'smooth double power law',
+                 'rho_z':'DTD*SFH',
+                 'dtd':'pow',
+                 'thc':10**x[i,0],
+                 'Lc*':10**x[i,1],
+                 'a_L':x[i,2],
+                 'b_L':x[i,3],
+                 'Epc*':10**x[i,4],
+                 'a_Ep':x[i,5],
+                 'b_Ep':x[i,6],
+                 'thw':10**x[i,7],
+                 'A':x[i,8],
+                 's_c':10**x[i,9],
+                 'y':x[i,10],
+                 'tdmin':x[i,11],
+                 'at':x[i,12]
+                 }
+                 # 'dtd':'lognorm',
+                 # 'mu_td':x[i,11],
+                 # 'sigma_td':x[i,12]
+                 # 'dtd':'pow',
+                 # 'tdmin':x[i,11],
+                 # 'at':x[i,12]
+            
+            if chain2 is not None:
+            #     theta_pop2 = {'jetmodel':'smooth double power law',
+            #      'rho_z':'SBPL',
+            #      'thc':10**x2[i,0],
+            #      'Lc*':10**x2[i,1],
+            #      'a_L':x2[i,2],
+            #      'b_L':x2[i,3],
+            #      'Epc*':10**x2[i,4],
+            #      'a_Ep':x2[i,5],
+            #      'b_Ep':x2[i,6],
+            #      'thw':10**x2[i,7],
+            #      'A':x2[i,8],
+            #      's_c':10**x2[i,9],
+            #      'y':x2[i,10],
+            #      'a':x2[i,11],
+            #      'b':x2[i,12],
+            #      'zp':x2[i,13]
+            #     }
+                theta_pop2 = {'jetmodel':'smooth double power law',
+                 'rho_z':'DTD*SFH',
+                 'dtd':'pow',
+                 'thc':10**x2[i,0],
+                 'Lc*':10**x2[i,1],
+                 'a_L':x2[i,2],
+                 'b_L':x2[i,3],
+                 'Epc*':10**x2[i,4],
+                 'a_Ep':x2[i,5],
+                 'b_Ep':x2[i,6],
+                 'thw':10**x2[i,7],
+                 'A':x2[i,8],
+                 's_c':10**x2[i,9],
+                 'y':x2[i,10],
+                 'tdmin':x2[i,11],
+                 'at':x2[i,12]
+                }
+                 # 'dtd':'lognorm',
+                 # 'mu_td':x2[i,11],
+                 # 'sigma_td':x2[i,12]
+                 # 'dtd':'pow',
+                 # 'tdmin':x2[i,11],
+                 # 'at':x2[i,12]
         
         PEpL = grbpop.Ppop.PEpL(L,Ep,theta_pop,grid=True)
         PEpL/=np.trapz(np.trapz(PEpL*Epg[:,:,0]*Lg[:,:,0],np.log(L),axis=1),np.log(Ep))
@@ -209,7 +306,10 @@ if recompute:
             rhoz/=rhoz[0]
 
         psiz = rhoz/(1.+z)*dVdz
-        R0[i] = Robs/np.trapz(np.trapz(np.trapz(PEpL.reshape([len(Ep),len(L),1])*psiz.reshape([1,1,len(z)])*Epg*Lg*zg*Pdet,np.log(z),axis=2),np.log(L),axis=1),np.log(Ep))
+        if Poisson:
+            R0[i] = theta_pop['R0']
+        else:
+            R0[i] = Robs/np.trapz(np.trapz(np.trapz(PEpL.reshape([len(Ep),len(L),1])*psiz.reshape([1,1,len(z)])*Epg*Lg*zg*Pdet,np.log(z),axis=2),np.log(L),axis=1),np.log(Ep))
         R0[i] = np.nan_to_num(R0[i])
         dR0_dlogL[i] = L*R0[i]*grbpop.diagnose.luminosity_function(L,theta_pop)
         dN_dVdt[i] = R0[i]*psiz*(1.+z)/dVdz
@@ -230,7 +330,10 @@ if recompute:
                 rhoz2/=rhoz2[0]
             
             psiz2 = rhoz2/(1.+z)*dVdz
-            R02[i] = Robs/np.trapz(np.trapz(np.trapz(PEpL2.reshape([len(Ep),len(L),1])*psiz2.reshape([1,1,len(z)])*Epg*Lg*zg*Pdet,np.log(z),axis=2),np.log(L),axis=1),np.log(Ep))
+            if Poisson:
+                R02[i] = theta_pop2 ['R0']
+            else: 
+                R02[i] = Robs/np.trapz(np.trapz(np.trapz(PEpL2.reshape([len(Ep),len(L),1])*psiz2.reshape([1,1,len(z)])*Epg*Lg*zg*Pdet,np.log(z),axis=2),np.log(L),axis=1),np.log(Ep))
             R02[i] = np.nan_to_num(R02[i])
             dR0_dlogL2[i] = L*R02[i]*grbpop.diagnose.luminosity_function(L,theta_pop2)
             dN_dVdt2[i] = R02[i]*psiz2*(1.+z)/dVdz
@@ -251,9 +354,9 @@ if recompute:
         np.save('cache/results_dN_dVdt2{0}.npy'.format(suffix),dN_dVdt2)
         np.save('cache/results_tildeL2{0}.npy'.format(suffix),tildeL2)
         np.save('cache/results_tildeEp2{0}.npy'.format(suffix),tildeEp2)
-    
+
+
 else:
-    
     R0 = np.load('cache/results_R0{0}.npy'.format(suffix))
     dR0_dlogL = np.load('cache/results_dR0_dlogL{0}.npy'.format(suffix))
     dN_dVdt = np.load('cache/results_dN_dVdt{0}.npy'.format(suffix))
@@ -306,7 +409,8 @@ R00 = np.logspace(-2.,5.4,1000)
 dP_dlogR0 = logR0_kde.pdf(np.log(R00))
 dP_dlogR0_50 = logR0_50_kde.pdf(np.log(R00))
 
-plt.plot(R00,dP_dlogR0,ls='-',color='r',lw=3,label='Full')
+plt.plot(R00,dP_dlogR0,ls='-',color='r',lw=3,label='Completeness')
+# plt.plot(R00,dP_dlogR0,ls='-',color='r',lw=3,label='Full')
 
 if chain2 is not None:
     logR02_kde = gaussian_kde(np.log(R02))
@@ -315,7 +419,8 @@ if chain2 is not None:
     dP_dlogR02 = logR02_kde.pdf(np.log(R00))
     dP_dlogR02_50 = logR02_50_kde.pdf(np.log(R00))
     
-    plt.plot(R00,dP_dlogR02,ls='--',color='orange',lw=3,label='Flux-limited')
+    plt.plot(R00,dP_dlogR02,ls='--',color='orange',lw=3,label='Incorrect selection effects')
+    # plt.plot(R00,dP_dlogR02,ls='--',color='orange',lw=3,label='Flux-limited')
 
 plt.semilogx()
 plt.xlabel(r'$R_0\,\mathrm{[Gpc^{-3}\,yr^{-1}]}$')
@@ -336,11 +441,13 @@ plt.annotate(xy=((10*1700.)**0.5,0.45),text='BNS\n(GWTC-3)',ha='center',va='top'
 plt.figure('Lum func')
 
 plt.fill_between(L,np.percentile(dR0_dlogL,5.,axis=0),np.percentile(dR0_dlogL,95.,axis=0),edgecolor='r',facecolor='pink',alpha=0.5)
-plt.plot(L,np.percentile(dR0_dlogL,50.,axis=0),'-r',lw=3,label='Full')
+plt.plot(L,np.percentile(dR0_dlogL,50.,axis=0),'-r',lw=3,label='Completeness')
+# plt.plot(L,np.percentile(dR0_dlogL,50.,axis=0),'-r',lw=3,label='Full')
 
 if chain2 is not None:
     plt.fill_between(L,np.percentile(dR0_dlogL2,5.,axis=0),np.percentile(dR0_dlogL2,90.,axis=0),edgecolor='orange',facecolor='#FFD8C0',alpha=0.5,zorder=-10,ls='--')
-    plt.plot(L,np.percentile(dR0_dlogL2,50.,axis=0),ls='--',color='orange',lw=1.5,alpha=0.5,zorder=-10,label='Flux-limited')
+    plt.plot(L,np.percentile(dR0_dlogL2,50.,axis=0),ls='--',color='orange',lw=1.5,alpha=0.5,zorder=-10,label='Incorrect selection effects')
+    # plt.plot(L,np.percentile(dR0_dlogL2,50.,axis=0),ls='--',color='orange',lw=1.5,alpha=0.5,zorder=-10,label='Flux-limited')
 
 
 # Plot the luminosity distribution of model (a) from Ghirlanda et al. 2016, for comparison
@@ -420,11 +527,12 @@ plt.title(r'$L_\mathrm{min}=10^{50}\,\mathrm{erg/s}$')
 logR0_50_g16_kde = gaussian_kde(np.log(R0_50_g16[R0_50_g16>0.]))
 logR0_50_wp15_kde = gaussian_kde(np.log(R0_50_wp15[R0_50_wp15>0.]))
 
-
-plt.plot(R00,dP_dlogR0_50,ls='-',color='r',lw=3,label='Full')
+plt.plot(R00,dP_dlogR0_50,ls='-',color='r',lw=3,label='Completeness')
+# plt.plot(R00,dP_dlogR0_50,ls='-',color='r',lw=3,label='Full')
 
 if chain2 is not None:
-    plt.plot(R00,dP_dlogR02_50,ls='--',color='orange',lw=3,label='Flux-limited')
+    plt.plot(R00,dP_dlogR02_50,ls='--',color='orange',lw=3,label='Incorrect selection effects')
+    # plt.plot(R00,dP_dlogR02_50,ls='--',color='orange',lw=3,label='Flux-limited')
 
 plt.plot(R00,logR0_50_g16_kde.pdf(np.log(R00)),ls='-',color='grey',lw=2,label=r'G16 (a) ',zorder=-1)
 plt.plot(R00,logR0_50_wp15_kde.pdf(np.log(R00)),ls='-',color='blue',lw=2,label=r'W15',zorder=-2)
@@ -451,14 +559,15 @@ plt.title(r'$L_\mathrm{min}=10^{50}\,\mathrm{erg/s}$')
 dN_dVdt *= (R0_50/R0).reshape([N,1])
 
 plt.fill_between(z,np.percentile(dN_dVdt,5.,axis=0),np.percentile(dN_dVdt,95.,axis=0),edgecolor='r',facecolor='pink',alpha=0.5)
-plt.plot(z,np.percentile(dN_dVdt,50.,axis=0),'-r',lw=3,label='Full',zorder=3)
+plt.plot(z,np.percentile(dN_dVdt,50.,axis=0),'-r',lw=3,label='Completeness',zorder=3)
+# plt.plot(z,np.percentile(dN_dVdt,50.,axis=0),'-r',lw=3,label='Full',zorder=3)
 
 if chain2 is not None:
     dN_dVdt2 *= (R02_50/R02).reshape([N2,1])
     
     plt.fill_between(z,np.percentile(dN_dVdt2,16.,axis=0),np.percentile(dN_dVdt2,84.,axis=0),edgecolor='orange',facecolor='#FFD8C0',alpha=0.5,ls='--')
-    plt.plot(z,np.percentile(dN_dVdt2,50.,axis=0),ls='--',color='orange',lw=1.5,label='Flux-limited',zorder=10)
-
+    plt.plot(z,np.percentile(dN_dVdt2,50.,axis=0),ls='--',color='orange',lw=1.5,label='Incorrect selection effects',zorder=10)
+    # plt.plot(z,np.percentile(dN_dVdt2,50.,axis=0),ls='--',color='orange',lw=1.5,label='Flux-limited',zorder=10)
 
 #plt.plot(1.+z,dN_dVdt.T[:,:100],color='grey',lw=0.5,alpha=0.5)
 
@@ -591,11 +700,13 @@ plt.annotate(xy=(8,4e50),text=r'$\theta_\mathrm{v}^{-4.7}$',ha='left',va='bottom
 
 # struct
 plt.fill_between(th/np.pi*180.,np.percentile(tildeL,16.,axis=0),np.percentile(tildeL,85.,axis=0),edgecolor='pink',facecolor='#FFB7E1',alpha=0.5,label='90% credible region')
-plt.plot(th/np.pi*180.,np.percentile(tildeL,50.,axis=0),'-r',label=r'Full')
+plt.plot(th/np.pi*180.,np.percentile(tildeL,50.,axis=0),'-r',label=r'Completeness')
+# plt.plot(th/np.pi*180.,np.percentile(tildeL,50.,axis=0),'-r',label=r'Full')
 
 if chain2 is not None:
     plt.fill_between(th/np.pi*180.,np.percentile(tildeL2,16.,axis=0),np.percentile(tildeL2,85.,axis=0),edgecolor='#FFDFB7',facecolor='#FFD8C0',alpha=0.5,ls='--',zorder=-2)
-    plt.plot(th/np.pi*180.,np.percentile(tildeL2,50.,axis=0),ls='--',color='orange',zorder=-1,label='Flux-limited')
+    plt.plot(th/np.pi*180.,np.percentile(tildeL2,50.,axis=0),ls='--',color='orange',zorder=-1,label='Incorrect selection effects')
+    # plt.plot(th/np.pi*180.,np.percentile(tildeL2,50.,axis=0),ls='--',color='orange',zorder=-1,label='Flux-limited')
     
 
 plt.contour(dthvL/np.pi*180.,10**dlogL,d2L,levels=[0.5,0.9],colors=['#11FF00','#11FF00'],linestyles=['-','-'],zorder=4,alpha=1.)
@@ -641,12 +752,13 @@ plt.plot(th/np.pi*180.,np.where((th>0.05)&(th<0.4),1.,np.nan)*0.7e3*(th/0.4)**-2
 plt.annotate(xy=(10.,4e3),text=r'$\theta_\mathrm{v}^{-2}$',ha='left',va='bottom',color='grey')
 
 plt.fill_between(th/np.pi*180.,np.percentile(tildeEp,16.,axis=0),np.percentile(tildeEp,84.,axis=0),edgecolor='#54ABFF',facecolor='#54ABFF',alpha=0.5)
-plt.plot(th/np.pi*180.,np.percentile(tildeEp,50.,axis=0),'-b',label=r'Full')
+plt.plot(th/np.pi*180.,np.percentile(tildeEp,50.,axis=0),'-b',label=r'Completeness')
+# plt.plot(th/np.pi*180.,np.percentile(tildeEp,50.,axis=0),'-b',label=r'Full')
 
 if chain2 is not None:
     plt.fill_between(th/np.pi*180.,np.percentile(tildeEp2,16.,axis=0),np.percentile(tildeEp2,84.,axis=0),edgecolor='#26E9E9',facecolor='#B6FFFF',alpha=0.5,zorder=-2,ls='--')
-    plt.plot(th/np.pi*180.,np.percentile(tildeEp2,50.,axis=0),ls='--',color='cyan',label=r'Flux-limited',zorder=-1)
-
+    plt.plot(th/np.pi*180.,np.percentile(tildeEp2,50.,axis=0),ls='--',color='cyan',label=r'Incorrect selection effects',zorder=-1)
+    # plt.plot(th/np.pi*180.,np.percentile(tildeEp2,50.,axis=0),ls='--',color='cyan',label=r'Flux-limited',zorder=-1)
 
 plt.contour(dthvEp/np.pi*180.,10**dlogEp,d2Ep,levels=[0.5,0.9],colors=['#11FF00','#11FF00'],linestyles=['-','-'],zorder=-1,alpha=0.8)
 
@@ -709,7 +821,8 @@ plt.contourf((L[1:]*L[:-1])**0.5,(Ep[1:]*Ep[:-1])**0.5,Y.T,levels=[1.,2.],colors
 
 
 plt.fill_between([0.],[0.],[0.],edgecolor='teal',facecolor='cyan',label='90% credible region',alpha=0.4,ls='-')
-plt.plot(np.percentile(tildeL,50.,axis=0),np.percentile(tildeEp,50.,axis=0),color='teal',label='Full')
+plt.plot(np.percentile(tildeL,50.,axis=0),np.percentile(tildeEp,50.,axis=0),color='teal',label='Completeness')
+# plt.plot(np.percentile(tildeL,50.,axis=0),np.percentile(tildeEp,50.,axis=0),color='teal',label='Full')
 
 for i in range(min(100,N)):
     plt.plot(tildeL[i],tildeEp[i],color='grey',lw=0.2,alpha=0.1)
@@ -733,7 +846,8 @@ if chain2 is not None:
     plt.contourf((L[1:]*L[:-1])**0.5,(Ep[1:]*Ep[:-1])**0.5,Y2.T,levels=[1.,1.2],colors=['#FDFF00'],alpha=0.4,linestyles=['-'],zorder=-2)
 
     
-    plt.plot(np.percentile(tildeL2,50.,axis=0),np.percentile(tildeEp2,50.,axis=0),color='#79D900',ls='--',label='Flux-limited',zorder=10)
+    plt.plot(np.percentile(tildeL2,50.,axis=0),np.percentile(tildeEp2,50.,axis=0),color='#79D900',ls='--',label='Incorrect selection effects',zorder=10)
+    # plt.plot(np.percentile(tildeL2,50.,axis=0),np.percentile(tildeEp2,50.,axis=0),color='#79D900',ls='--',label='Flux-limited',zorder=10)
 
 
 # show obs GRBs
