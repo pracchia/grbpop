@@ -49,14 +49,24 @@ Poisson = True
 
 suffix = '' 
 
-chain = 'chains/SGRB_full_Poisson_dtdsfh_pow.h5'
+chain = 'chains/SGRB_full_Poisson_dtdsfh_lognorm.h5'
+# chain = 'chains/SGRB_full_Poisson_dtdsfh_pow.h5'
 # chain = 'chains/SGRB_full-sample-analysis_dtdsfh_log.h5'
 # chain = 'chains/SGRB_full-sample-analysis_dtdsfh.h5'
-# chain = 'chains/SGRB_full-sample-analysis.h5'
+# chain = 'chains/SGRB_flux-limited-sample-analysis_dtdsfh_log.h5'
+# chain = 'chains/SGRB_flux-limited-sample-analysis_dtdsfh.h5'
+# chain = 'chains/SGRB_full_sample_analysis_Poisson.h5'
+# chain = 'chains/SGRB_GBM_plim_final_newsample.h5'
 
-chain2 = 'chains/SGRB_flux-limited-sample-analysis_Poisson_WRONGCUT_dtdsfh_pow_tight_boundaries.h5'
+
+chain2 = 'chains/SGRB_flux-limited-sample-analysis_Poisson_WRONGCUT_dtdsfh_log_tight_boundaries.h5'
+# chain2 = 'chains/SGRB_flux-limited-sample-analysis_Poisson_WRONGCUT_dtdsfh_pow_tight_boundaries.h5'
 # chain2 = 'chains/SGRB_flux-limited-sample-analysis_dtdsfh_log.h5'
 # chain2 = 'chains/SGRB_flux-limited-sample-analysis_dtdsfh.h5'
+# chain2 = 'chains/SGRB_flux-limited-sample-analysis_WRONGCUT_dtdsfh_log_tight_boundaries.h5'
+# chain2 = 'chains/SGRB_flux-limited-sample-analysis_WRONGCUT_dtdsfh_pow_tight_boundaries.h5'
+# chain2 = 'chains/SGRB_flux-limited-sample-analysis_Poisson_WRONGCUT_tight_boundaries.h5'
+# chain2 = 'chains/SGRB_flux-limited-sample-analysis_WRONGCUT_tight_boundaries.h5'
 # chain2 = 'chains/SGRB_flux-limited-sample-analysis.h5'
 specmodel = 'Comp'
 alpha = -0.4
@@ -64,7 +74,7 @@ inst = 'Fermi'
 pflim = 3.5
 N = 10
 res = 80
-Robs = 212./0.59/13. # Fermi GBM SGRBs with p64>pflim, corrected for FoV and duty cycle
+Robs = 212./0.59/10. # Fermi GBM SGRBs with p64>pflim, corrected for FoV and duty cycle
 
 thin = 3
 
@@ -142,7 +152,7 @@ if recompute:
             #  }
             theta_pop = {'jetmodel':'smooth double power law',
              'rho_z':'DTD*SFH',
-             'dtd':'pow',
+             'dtd':'lognorm',
              'thc':10**x[i,0],
              'Lc*':10**x[i,1],
              'a_L':x[i,2],
@@ -154,8 +164,8 @@ if recompute:
              'A':x[i,8],
              's_c':10**x[i,9],
              'y':x[i,10],
-             'tdmin':x[i,11],
-             'at':x[i,12],
+             'mu_td':x[i,11],
+             'sigma_td':x[i,12],
              'R0':10**x[i,13]
              }
              # 'dtd':'lognorm',
@@ -186,7 +196,7 @@ if recompute:
                 # }
                 theta_pop2 = {'jetmodel':'smooth double power law',
                  'rho_z':'DTD*SFH',
-                 'dtd':'pow',
+                 'dtd':'lognorm',
                  'thc':10**x2[i,0],
                  'Lc*':10**x2[i,1],
                  'a_L':x2[i,2],
@@ -198,8 +208,8 @@ if recompute:
                  'A':x2[i,8],
                  's_c':10**x2[i,9],
                  'y':x2[i,10],
-                 'tdmin':x2[i,11],
-                 'at':x2[i,12],
+                 'mu_td':x2[i,11],
+                 'sigma_td':x2[i,12],
                  'R0':10**x2[i,13]
                 }
                  # 'dtd':'lognorm',
@@ -229,7 +239,7 @@ if recompute:
             #      }
             theta_pop = {'jetmodel':'smooth double power law',
                  'rho_z':'DTD*SFH',
-                 'dtd':'pow',
+                 'dtd':'lognorm',
                  'thc':10**x[i,0],
                  'Lc*':10**x[i,1],
                  'a_L':x[i,2],
@@ -241,8 +251,8 @@ if recompute:
                  'A':x[i,8],
                  's_c':10**x[i,9],
                  'y':x[i,10],
-                 'tdmin':x[i,11],
-                 'at':x[i,12]
+                 'mu_td':x[i,11],
+                 'sigma_td':x[i,12]
                  }
                  # 'dtd':'lognorm',
                  # 'mu_td':x[i,11],
@@ -252,26 +262,26 @@ if recompute:
                  # 'at':x[i,12]
             
             if chain2 is not None:
-            #     theta_pop2 = {'jetmodel':'smooth double power law',
-            #      'rho_z':'SBPL',
-            #      'thc':10**x2[i,0],
-            #      'Lc*':10**x2[i,1],
-            #      'a_L':x2[i,2],
-            #      'b_L':x2[i,3],
-            #      'Epc*':10**x2[i,4],
-            #      'a_Ep':x2[i,5],
-            #      'b_Ep':x2[i,6],
-            #      'thw':10**x2[i,7],
-            #      'A':x2[i,8],
-            #      's_c':10**x2[i,9],
-            #      'y':x2[i,10],
-            #      'a':x2[i,11],
-            #      'b':x2[i,12],
-            #      'zp':x2[i,13]
-            #     }
+                # theta_pop2 = {'jetmodel':'smooth double power law',
+                #  'rho_z':'SBPL',
+                #  'thc':10**x2[i,0],
+                #  'Lc*':10**x2[i,1],
+                #  'a_L':x2[i,2],
+                #  'b_L':x2[i,3],
+                #  'Epc*':10**x2[i,4],
+                #  'a_Ep':x2[i,5],
+                #  'b_Ep':x2[i,6],
+                #  'thw':10**x2[i,7],
+                #  'A':x2[i,8],
+                #  's_c':10**x2[i,9],
+                #  'y':x2[i,10],
+                #  'a':x2[i,11],
+                #  'b':x2[i,12],
+                #  'zp':x2[i,13]
+                # }
                 theta_pop2 = {'jetmodel':'smooth double power law',
                  'rho_z':'DTD*SFH',
-                 'dtd':'pow',
+                 'dtd':'lognorm',
                  'thc':10**x2[i,0],
                  'Lc*':10**x2[i,1],
                  'a_L':x2[i,2],
@@ -283,8 +293,8 @@ if recompute:
                  'A':x2[i,8],
                  's_c':10**x2[i,9],
                  'y':x2[i,10],
-                 'tdmin':x2[i,11],
-                 'at':x2[i,12]
+                 'mu_td':x2[i,11],
+                 'sigma_td':x2[i,12]
                 }
                  # 'dtd':'lognorm',
                  # 'mu_td':x2[i,11],

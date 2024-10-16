@@ -48,6 +48,12 @@ thvs = rng.choice(thv17,Nsamples,p=w/np.sum(w))
 # set low-energy photon index to the median of the GBM sample
 alpha=-0.4
 
+# Duty cycles for the detectors
+eta_GBM = 0.59
+
+# Time intervals for Poisson distributions (in years)
+T_GBM = 10.
+T_O3 = 11./12.
 
 def logprior(theta_pop):
     """
@@ -119,8 +125,8 @@ def loglike(x):
     logl_GW170817 = grbpop.Ppop.known_theta_view_loglikelihood(Lsamples[-1],Epsamples[-1],thvs,theta_pop,prior_EpLz=pi_EpLz) + np.log(grbpop.Ppop.Pz(zobs[-1][0],theta_pop=theta_pop))-log_alpha_GRB_GW
 
     ## Poissonian terms
-    log_poisson_obsframe = grbpop.Ppop.log_poissonian_observer(theta_pop,N_obs=len(p50300),logalpha=log_alpha_obsframe,alpha=alpha,specmodel='Comp',inst='Fermi',res=80,pdet=pdet,pflim=None)
-    log_poisson_GW170817 = grbpop.Ppop.log_poissonian_GRB_GW(theta_pop,N_obs=1,logalpha=log_alpha_GRB_GW,pdet_GW='O3')
+    log_poisson_obsframe = grbpop.Ppop.log_poissonian_observer(theta_pop,N_obs=len(p50300),eta=eta_GBM,T=T_GBM,logalpha=log_alpha_obsframe,alpha=alpha,specmodel='Comp',inst='Fermi',res=80,pdet=pdet,pflim=None)
+    log_poisson_GW170817 = grbpop.Ppop.log_poissonian_GRB_GW(theta_pop,N_obs=1,eta=eta_GBM,T=T_O3,logalpha=log_alpha_GRB_GW,pdet_GW='O3')
     
     ## sum all contributions
     logl = logl_obsframe + logl_restframe + logl_GW170817 + log_poisson_obsframe + log_poisson_GW170817

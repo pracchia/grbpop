@@ -474,14 +474,14 @@ def logalpha_obsframe(theta_pop,pflim=3.5,inst='Fermi',pdet='gbm',alpha=-0.4,spe
     return logalpha
 
 
-def log_poissonian_observer(theta_pop, N_obs, eta=0.59, T=13., logalpha=None,pflim=3.5,inst='Fermi',pdet='gbm',alpha=-0.4,specmodel='Comp',res=100):
+def log_poissonian_observer(theta_pop,N_obs,eta=0.59,T=13.,logalpha=None,pflim=3.5,inst='Fermi',pdet='gbm',alpha=-0.4,specmodel='Comp',res=100):
     """
     Compute the logarithm of the Poissonian distribution of the observed multi-messenger detections of GRBs and GWs.
     Parameters:
     - theta_pop: dictionary specifying the population parameters
     - N_obs: number of observed GRB events
     - eta: factor that corrects for the accessible field of view and the duty cycle of the detectors considered
-    - T: total observing time
+    - T: total observing time (in years)
     - logalpha: if given, this is assumed to be the logarithm of the integral of Ppop*pdet, in which case its computation is avoided (to improve performance)
     - pflim: if pdet_GRB=None, this indicates the photon flux selection cut of the sample
     - inst: either "Fermi" (in which case the photon flux is computed in the 50-300 keV band) or "Swift" (in which case it is computed in the 15-150 keV band) 
@@ -514,7 +514,7 @@ def log_poissonian_observer(theta_pop, N_obs, eta=0.59, T=13., logalpha=None,pfl
     return logPoisson
 
 
-def log_poissonian_GRB_GW(theta_pop,N_obs,eta=0.59,T=11/12,logalpha=None,pflim=3.5,inst='Fermi',pdet_GRB='gbm',pdet_GW='O3',alpha=-0.5,specmodel='Comp',res=60,thvres=300):
+def log_poissonian_GRB_GW(theta_pop,N_obs,eta=0.59,T=11./12.,logalpha=None,pflim=3.5,inst='Fermi',pdet_GRB='gbm',pdet_GW='O3',alpha=-0.5,specmodel='Comp',res=60,thvres=300):
     """
     Compute the logarithm of the Poissonian distribution of the observed multi-messenger detections of GRBs and GWs.
     Parameters:
@@ -558,8 +558,6 @@ def log_poissonian_GRB_GW(theta_pop,N_obs,eta=0.59,T=11/12,logalpha=None,pflim=3
 
 
 ### "BIASED" likelihood functions ###
-
-
 
 def biased_obsframe_loglikelihood(pf,epbias=800,alpha=-0.4,specmodel='Comp',pflim=3.5,inst='Fermi',theta_pop=default_theta_pop,res=100,pdet='gbm',return_logalpha=False):
     """

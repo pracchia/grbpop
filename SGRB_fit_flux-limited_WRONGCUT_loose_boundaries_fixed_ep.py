@@ -19,7 +19,7 @@ ep = sgrb['pflx_comp_epeak'].values
 p_gbm_lim = 2.37
 p_swift_lim = 2.5
 clean = (p50300>p_gbm_lim) 
-efix = 800 # in keV
+efix = 1200 # in keV
 
 ep = ep[clean]
 p50300 = p50300[clean]
@@ -133,7 +133,7 @@ if __name__=='__main__':
     
     # initial guess vector
     #      log(thj)  log(Lj) a_L      b_L   log(Epj) a_Ep    b_Ep  log(thw)     A    log(s_c)        y        a      b    zp    
-    x0 = [-1.877,     51.55, 4.091, -2.318, 2.903,    1.2,   2.069, -0.5058, 3.041,  -0.5086,    0.000149, 1.431, 4.623,  0.9]  # starting guess
+    x0 = [-1.877,     51.55, 4.091, -2.318, 3.003,    1.2,   2.069, -0.5058, 3.041,  -0.5086,    0.000149, 1.431, 4.623,  0.9]  # starting guess
     
     # as a cross check
     print('Log likelihood at starting guess: ',loglike(x0))
