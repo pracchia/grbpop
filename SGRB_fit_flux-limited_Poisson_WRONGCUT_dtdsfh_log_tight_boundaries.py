@@ -77,7 +77,7 @@ def logprior(theta_pop):
     or theta_pop['R0']<1. or theta_pop['R0']>1e6:
         return -np.inf
     else:
-        return np.log(theta_pop['R0']) + np.log(theta_pop['thc']) + np.log(np.sin(theta_pop['thc'])) + np.log(theta_pop['thw']) + np.log(np.sin(theta_pop['thw'])) # "isotropic" prior on angles
+        return np.log(theta_pop['thc']) + np.log(np.sin(theta_pop['thc'])) + np.log(theta_pop['thw']) + np.log(np.sin(theta_pop['thw'])) # "isotropic" prior on angles
 
 
 def loglike(x):
@@ -117,7 +117,7 @@ def loglike(x):
     # evaluate log likelihood
 
     ## observer frame sample
-    logl_obsframe = grbpop.Ppop.obsframe_loglikelihood(p50300,ep,alpha=alpha,specmodel='Comp',inst='Fermi',theta_pop=theta_pop,res=80,pdet=pdet,pflim=p_gbm_lim,return_logalpha=False)
+    logl_obsframe, log_alpha_obsframe = grbpop.Ppop.obsframe_loglikelihood(p50300,ep,alpha=alpha,specmodel='Comp',inst='Fermi',theta_pop=theta_pop,res=80,pdet=pdet,pflim=p_gbm_lim,return_logalpha=True)
     
     ## restframe sample
     logl_restframe = grbpop.Ppop.restframe_loglikelihood(Lsamples[:-1],Epsamples[:-1],zobs[:-1],alpha=alpha,inst='Fermi+Swift',theta_pop=theta_pop,specmodel='Comp',pdet=None,pflim=[p_gbm_lim,p_swift_lim],prior_EpLz=pi_EpLz,logalpha=None,res=60)

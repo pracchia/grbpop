@@ -76,7 +76,7 @@ def logprior(theta_pop):
     or theta_pop['R0']<1. or theta_pop['R0']>1e6:
         return -np.inf
     else:
-        return np.log(theta_pop['R0']) + np.log(theta_pop['thc']) + np.log(np.sin(theta_pop['thc'])) + np.log(theta_pop['thw']) + np.log(np.sin(theta_pop['thw'])) # "isotropic" prior on angles
+        return np.log(theta_pop['thc']) + np.log(np.sin(theta_pop['thc'])) + np.log(theta_pop['thw']) + np.log(np.sin(theta_pop['thw'])) # "isotropic" prior on angles
 
 def loglike(x):
     """
@@ -140,7 +140,7 @@ def loglike(x):
 if __name__=='__main__':
     nthreads = 8
     N_iter = 10000
-    chain_filename = 'chains/SGRB_full_Poisson_dtdsfh_lognorm.h5' # full
+    chain_filename = 'chains/SGRB_full_Poisson_dtdsfh_log.h5' # full
 
     
     # initial guess vector for 'dtd':'lognorm'

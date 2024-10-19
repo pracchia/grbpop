@@ -77,7 +77,7 @@ def logprior(theta_pop):
     or theta_pop['R0']<1. or theta_pop['R0']>1e6:
         return -np.inf
     else:
-        return np.log(theta_pop['R0']) + np.log(theta_pop['thc']) + np.log(np.sin(theta_pop['thc'])) + np.log(theta_pop['thw']) + np.log(np.sin(theta_pop['thw'])) # "isotropic" prior on angles
+        return np.log(theta_pop['thc']) + np.log(np.sin(theta_pop['thc'])) + np.log(theta_pop['thw']) + np.log(np.sin(theta_pop['thw'])) # "isotropic" prior on angles
 
 def loglike(x):
     """
