@@ -47,13 +47,7 @@ for model in ['Comp','Band']:
     np.save('pflux_tables/pflux_L_Swift_{}.npy'.format(model),pflux_L_Swift)
     np.save('pflux_tables/kcorr_Fermi_{}.npy'.format(model),kcorr_Fermi)
     np.save('pflux_tables/kcorr_Swift_{}.npy'.format(model),kcorr_Swift)
-    
-
-
-
-
-for model in ['Comp','Band']:
-    
+        
     # check
     Itp_Fermi = RegularGridInterpolator(points=(np.log10(z),np.log10(Ep),alphas),values=np.log10(pflux_L_Fermi),bounds_error=False)
     Itp_Swift = RegularGridInterpolator(points=(np.log10(z),np.log10(Ep),alphas),values=np.log10(pflux_L_Swift),bounds_error=False)
