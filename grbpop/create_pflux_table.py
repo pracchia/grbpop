@@ -52,20 +52,20 @@ for model in ['Comp','Band']:
     Itp_Fermi = RegularGridInterpolator(points=(np.log10(z),np.log10(Ep),alphas),values=np.log10(pflux_L_Fermi),bounds_error=False)
     Itp_Swift = RegularGridInterpolator(points=(np.log10(z),np.log10(Ep),alphas),values=np.log10(pflux_L_Swift),bounds_error=False)
     
-    z = np.random.uniform(0.001,10.,100)
-    dL = cosmo.luminosity_distance(z).to('cm').value
-    Ep = 10**np.random.uniform(-1,6,100)
-    alpha = np.random.uniform(-1.9,1,100)
+    z1 = np.random.uniform(0.001,10.,100)
+    dL1 = cosmo.luminosity_distance(z1).to('cm').value
+    Ep1 = 10**np.random.uniform(-1,6,100)
+    alpha1 = np.random.uniform(-1.9,1,100)
     
-    res_Swift = np.zeros_like(z)
-    res_Fermi = np.zeros_like(z)
+    res_Swift = np.zeros_like(z1)
+    res_Fermi = np.zeros_like(z1)
     
-    pfFi = 10**Itp_Fermi(np.vstack([np.log10(z),np.log10(Ep),alpha]).T)
-    pfSi = 10**Itp_Swift(np.vstack([np.log10(z),np.log10(Ep),alpha]).T)
+    pfFi = 10**Itp_Fermi(np.vstack([np.log10(z1),np.log10(Ep1),alpha1]).T)
+    pfSi = 10**Itp_Swift(np.vstack([np.log10(z1),np.log10(Ep1),alpha1]).T)
     
-    for i in range(len(z)):
-        pfF = spectrum.photon_flux(1.,Ep[i],alpha[i],z[i],dL[i],band=Fermi,model=model,Ebol_low=0.1,Ebol_high=1e7)
-        pfS = spectrum.photon_flux(1.,Ep[i],alpha[i],z[i],dL[i],band=Swift,model=model,Ebol_low=0.1,Ebol_high=1e7)
+    for i in range(len(z1)):
+        pfF = spectrum.photon_flux(1.,Ep1[i],alpha1[i],z1[i],dL1[i],band=Fermi,model=model,Ebol_low=0.1,Ebol_high=1e7)
+        pfS = spectrum.photon_flux(1.,Ep1[i],alpha1[i],z1[i],dL1[i],band=Swift,model=model,Ebol_low=0.1,Ebol_high=1e7)
         
         res_Swift[i]=np.abs(pfSi[i]/pfS - 1.)
         res_Fermi[i]=np.abs(pfFi[i]/pfF - 1.)
