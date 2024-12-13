@@ -30,90 +30,194 @@ def ltrapz(x,y,axis=-1,reshape=None):
 def lcumtrapz(x,y,axis=-1,initial=0.):
     return cumtrapz(y*x,np.log(y),axis=axis,initial=initial)
 
+thin = 10
+burnin_fraction = 0.5
 
-x2 = [-1.285, 51.66, 4.891, 1.905, 3.653, 1.549, 1.51, 0.05123, 2.911, -0.05058, -0.01845, 3.82, 5.462, 2.346] # DBPL flux-limited
-x = [-1.325, 51.58, 4.364, -0.2971, 4.352, 1.868, -1.76, 0.1811, 3.245, -0.0001222, -0.3173, 4.849, 9.02, 2.4] # DBPL full
-
-
-# theta_pop2 = {'jetmodel':'smooth double power law',
-#              'rho_z':'SBPL',
-#              'thc':10**x2[0],
-#              'Lc*':10**x2[1],
-#              'a_L':x2[2],
-#              'b_L':x2[3],
-#              'Epc*':10**x2[4],
-#              'a_Ep':x2[5],
-#              'b_Ep':x2[6],
-#              'thw':10**x2[7],
-#              'A':x2[8],
-#              's_c':10**x2[9],
-#              'y':x2[10],
-#              'a':x2[11],
-#              'b':x2[12],
-#              'zp':x2[13]
-#              }
-theta_pop2 = {'jetmodel':'smooth double power law',
-             'rho_z':'DTD*SFH',
-             'thc':10**x2[0],
-             'Lc*':10.**x2[1],
-             'a_L':x2[2],
-             'b_L':x2[3],
-             'Epc*':10.**x2[4],
-             'a_Ep':x2[5],
-             'b_Ep':x2[6],
-             'thw':10.**x2[7],
-             'A':x2[8],
-             's_c':10.**x2[9],
-             'y':x2[10],
-             'tdmin':x2[11],
-             'at':x2[12]
-         }
-
+# chain = 'chains/SGRB_full-sample-analysis_dtdsfh.h5'
+# x, ll = read_chain(chain,burnin_fraction=burnin_fraction,thin=thin,bounds=None)
+# x_def = np.percentile(x,50,axis=0)
+# theta_pop = {'jetmodel':'smooth double power law',
+#              'rho_z':'DTD*SFH',
+#              'dtd':'pow',
+#              'thc':10**x_def[0],
+#              'Lc*':10.**x_def[1],
+#              'a_L':x_def[2],
+#              'b_L':x_def[3],
+#              'Epc*':10.**x_def[4],
+#              'a_Ep':x_def[5],
+#              'b_Ep':x_def[6],
+#              'thw':10.**x_def[7],
+#              'A':x_def[8],
+#              's_c':10.**x_def[9],
+#              'y':x_def[10],
+#              'tdmin':x_def[11],
+#              'at':x_def[12]
+#          }
+# chain1 = 'chains/SGRB_full_sample_analysis_Poisson.h5'
+# x, ll1 = read_chain(chain1,burnin_fraction=burnin_fraction,thin=thin,bounds=None)
+# x_def = np.percentile(x,50,axis=0)
 # theta_pop = {'jetmodel':'smooth double power law',
 #              'rho_z':'SBPL',
-#              'thc':10**x[0],
-#              'Lc*':10**x[1],
-#              'a_L':x[2],
-#              'b_L':x[3],
-#              'Epc*':10**x[4],
-#              'a_Ep':x[5],
-#              'b_Ep':x[6],
-#              'thw':10**x[7],
-#              'A':x[8],
-#              's_c':10**x[9],
-#              'y':x[10],
-#              'a':x[11],
-#              'b':x[12],
-#              'zp':x[13]
-#              }
+#              'thc':10**x_def[0],
+#              'Lc*':10.**x_def[1],
+#              'a_L':x_def[2],
+#              'b_L':x_def[3],
+#              'Epc*':10.**x_def[4],
+#              'a_Ep':x_def[5],
+#              'b_Ep':x_def[6],
+#              'thw':10.**x_def[7],
+#              'A':x_def[8],
+#              's_c':10.**x_def[9],
+#              'y':x_def[10],
+#              'a':x_def[11],
+#              'b':x_def[12],
+#              'zp':x_def[13],
+#              'R0':10**x_def[14]
+#          }
+chain1 = 'chains/SGRB_full_Poisson_dtdsfh_pow.h5'
+# chain1 = 'chains/SGRB_full_Poisson_dtdsfh_pow_zp_3_2.h5'
+x, ll1 = read_chain(chain1,burnin_fraction=burnin_fraction,thin=thin,bounds=None)
+x_def = np.percentile(x,50,axis=0)
 theta_pop = {'jetmodel':'smooth double power law',
              'rho_z':'DTD*SFH',
-             'thc':10**x[0],
-             'Lc*':10.**x[1],
-             'a_L':x[2],
-             'b_L':x[3],
-             'Epc*':10.**x[4],
-             'a_Ep':x[5],
-             'b_Ep':x[6],
-             'thw':10.**x[7],
-             'A':x[8],
-             's_c':10.**x[9],
-             'y':x[10],
-             'tdmin':x[11],
-             'at':x[12]
+             'dtd':'pow',
+             'thc':10**x_def[0],
+             'Lc*':10.**x_def[1],
+             'a_L':x_def[2],
+             'b_L':x_def[3],
+             'Epc*':10.**x_def[4],
+             'a_Ep':x_def[5],
+             'b_Ep':x_def[6],
+             'thw':10.**x_def[7],
+             'A':x_def[8],
+             's_c':10.**x_def[9],
+             'y':x_def[10],
+             'tdmin':x_def[11],
+             'at':x_def[12],
+             'R0':10**x_def[13],
          }
+# chain1 = 'chains/SGRB_GBM_pdetgbm_final_newsample.h5'
+# x, ll1 = read_chain(chain1,burnin_fraction=burnin_fraction,thin=thin,bounds=None)
+# x_def = np.percentile(x,50,axis=0)
+# theta_pop = {'jetmodel':'smooth double power law',
+#             'rho_z':'SBPL',
+#             'thc':10**x_def[0],
+#             'Lc*':10**x_def[1],
+#             'a_L':x_def[2],
+#             'b_L':x_def[3],
+#             'Epc*':10**x_def[4],
+#             'a_Ep':x_def[5],
+#             'b_Ep':x_def[6],
+#             'thw':10**x_def[7],
+#             'A':x_def[8],
+#             's_c':10**x_def[9],
+#             'y':x_def[10],
+#             'a':x_def[11],
+#             'b':x_def[12],
+#             'zp':x_def[13]
+#             }
+
+
+# chain2 = 'chains/SGRB_full-sample-analysis_dtdsfh_log.h5'
+# x2, ll2 = read_chain(chain2,burnin_fraction=burnin_fraction,thin=thin,bounds=None)
+# x2_def = np.percentile(x,50,axis=0)
+# theta_pop2 = {'jetmodel':'smooth double power law',
+#              'rho_z':'DTD*SFH',
+#              'dtd':'lognorm',
+#              'thc':10**x2_def[0],
+#              'Lc*':10.**x2_def[1],
+#              'a_L':x2_def[2],
+#              'b_L':x2_def[3],
+#              'Epc*':10.**x2_def[4],
+#              'a_Ep':x2_def[5],
+#              'b_Ep':x2_def[6],
+#              'thw':10.**x2_def[7],
+#              'A':x2_def[8],
+#              's_c':10.**x2_def[9],
+#              'y':x2_def[10],
+#              'mu_td':x2_def[11],
+#              'sigma_td':x2_def[12]
+#          }
+chain2 = 'chains/SGRB_full_Poisson_dtdsfh_log.h5'
+# chain2 = 'chains/SGRB_full_Poisson_dtdsfh_log_zp_3_2.h5'
+x2, ll2 = read_chain(chain2,burnin_fraction=burnin_fraction,thin=thin,bounds=None)
+x2_def = np.percentile(x,50,axis=0)
+theta_pop2 = {'jetmodel':'smooth double power law',
+             'rho_z':'DTD*SFH',
+             'dtd':'lognorm',
+             'thc':10**x2_def[0],
+             'Lc*':10.**x2_def[1],
+             'a_L':x2_def[2],
+             'b_L':x2_def[3],
+             'Epc*':10.**x2_def[4],
+             'a_Ep':x2_def[5],
+             'b_Ep':x2_def[6],
+             'thw':10.**x2_def[7],
+             'A':x2_def[8],
+             's_c':10.**x2_def[9],
+             'y':x2_def[10],
+             'mu_td':x2_def[11],
+             'sigma_td':x2_def[12],
+             'R0':10**x2_def[13],
+         }
+# chain2 = 'chains/SGRB_flux-limited-sample-analysis_Poisson_WRONGCUT_dtdsfh_pow_EVERY_BIAS_FIXED.h5'
+# x2, ll2 = read_chain(chain2,burnin_fraction=burnin_fraction,thin=thin,bounds=None)
+# x2_def = np.percentile(x2,50,axis=0)
+# theta_pop2 = {'jetmodel':'smooth double power law',
+#          'rho_z':'DTD*SFH',
+#          'dtd':'pow',
+#          'thc':10**x2_def[0],
+#          'Lc*':10**x2_def[1],
+#          'a_L':x2_def[2],
+#          'b_L':x2_def[3],
+#          'Epc*':800.,
+#          'a_Ep':x2_def[4],
+#          'b_Ep':x2_def[5],
+#          'thw':10**x2_def[6],
+#          'A':x2_def[7],
+#          's_c':0.3,
+#          'y':0.,
+#          'tdmin':x2_def[8],
+#          'at':x2_def[9],
+#          'R0':10**x2_def[10]
+#         }
+# chain2 = 'chains/SGRB_GBM_plim_final_newsample.h5'
+# x2, ll2 = read_chain(chain2,burnin_fraction=burnin_fraction,thin=thin,bounds=None)
+# x2_def = np.percentile(x2,50,axis=0)
+# theta_pop2 = {'jetmodel':'smooth double power law',
+#                 'rho_z':'SBPL',
+#                 'thc':10**x2_def[0],
+#                 'Lc*':10**x2_def[1],
+#                 'a_L':x2_def[2],
+#                 'b_L':x2_def[3],
+#                 'Epc*':10**x2_def[4],
+#                 'a_Ep':x2_def[5],
+#                 'b_Ep':x2_def[6],
+#                 'thw':10**x2_def[7],
+#                 'A':x2_def[8],
+#                 's_c':10**x2_def[9],
+#                 'y':x2_def[10],
+#                 'a':x2_def[11],
+#                 'b':x2_def[12],
+#                 'zp':x2_def[13]
+#                 }
 
 plim_Swift = 3.5
+plim_Swift_bias = plim_Swift
+# plim_Swift_bias = 2.5
 plim_Fermi = 0.01
+plim_Fermi_bias = plim_Fermi
+# plim_Fermi_bias = 2.37
 inst_restframe = 'Fermi+Swift'
 specmodel = 'Comp'
 alpha = -0.4
-pdet = lambda pf,epp: (pf>3.5)
+pdet = lambda pf,epp: (pf>plim_Swift)
+pdet_bias = lambda pf,epp: (pf>plim_Swift_bias)
     
-
-L = np.logspace(44,54.5,51)
-Ep = np.logspace(0,5,50)
-z = np.logspace(-3,1,49)
+res = 50
+L = np.logspace(44,54.5,res+1)
+Ep = np.logspace(0,5,res)
+z = np.logspace(-3,1,res-1)
 
 PEpL = grbpop.PEpL(L,Ep,theta_pop)
 
@@ -128,7 +232,8 @@ plt.figure('Rest-frame constraints')
 
 L,Ep,z,PEpL_contours,cum_L,cum_Ep,cum_z = grbpop.diagnose.L_Ep_z_contours_and_cumulatives(theta_pop,pflim=[plim_Fermi,plim_Swift],pdet='gbm',inst=inst_restframe,alpha=alpha,specmodel=specmodel)
 
-L2,Ep2,z2,PEpL_contours2,cum_L2,cum_Ep2,cum_z2 = grbpop.diagnose.L_Ep_z_contours_and_cumulatives(theta_pop2,pflim=[plim_Fermi,plim_Swift],pdet=pdet,inst=inst_restframe,alpha=alpha,specmodel=specmodel)
+L2,Ep2,z2,PEpL_contours2,cum_L2,cum_Ep2,cum_z2 = grbpop.diagnose.L_Ep_z_contours_and_cumulatives(theta_pop2,pflim=[plim_Fermi_bias,plim_Swift_bias],pdet='gbm',inst=inst_restframe,alpha=alpha,specmodel=specmodel)
+# L2,Ep2,z2,PEpL_contours2,cum_L2,cum_Ep2,cum_z2 = grbpop.diagnose.L_Ep_z_contours_and_cumulatives(theta_pop2,pflim=[plim_Fermi_bias,plim_Swift_bias],pdet=pdet_bias,inst=inst_restframe,alpha=alpha,specmodel=specmodel)
 
 LGW,EpGW,zGW,PEpL_contoursGW,cum_LGW,cum_EpGW,cum_zGW = grbpop.diagnose.L_Ep_z_contours_and_cumulatives(theta_pop,pflim=None,pdet='gbm',inst='Fermi+GW',alpha=alpha,specmodel=specmodel,pdetGW=grbpop.pdet.pdet_GW_O3)
 
@@ -200,16 +305,27 @@ cum_Ep2 = np.zeros([NN,len(cum_Ep2)])
 cum_z = np.zeros([NN,len(cum_z)])
 cum_z2 = np.zeros([NN,len(cum_z2)])
 
-chain2 = 'chains/SGRB_flux-limited-sample-analysis.h5'
-chain = 'chains/SGRB_full-sample-analysis.h5'
-
-thin = 10
-
-x,ll = read_chain(chain,burnin_fraction=0.5,thin=thin)
-x2,ll2 = read_chain(chain2,burnin_fraction=0.5,thin=thin)
-
 for i in range(NN):
+    # theta_pop_i = {'jetmodel':'smooth double power law',
+    #             'rho_z':'DTD*SFH',
+    #             'dtd':'pow',
+    #             'thc':10**x[i,0],
+    #             'Lc*':10**x[i,1],
+    #             'a_L':x[i,2],
+    #             'b_L':x[i,3],
+    #             'Epc*':10**x[i,4],
+    #             'a_Ep':x[i,5],
+    #             'b_Ep':x[i,6],
+    #             'thw':10**x[i,7],
+    #             'A':x[i,8],
+    #             's_c':10**x[i,9],
+    #             'y':x[i,10],
+    #             'tdmin':x[i,11],
+    #             'at':x[i,12]
+    #             }
     theta_pop_i = {'jetmodel':'smooth double power law',
+             'rho_z':'DTD*SFH',
+             'dtd':'pow',
              'thc':10**x[i,0],
              'Lc*':10**x[i,1],
              'a_L':x[i,2],
@@ -221,31 +337,121 @@ for i in range(NN):
              'A':x[i,8],
              's_c':10**x[i,9],
              'y':x[i,10],
-             'a':x[i,11],
-             'b':x[i,12],
-             'zp':x[i,13]
+             'tdmin':x[i,11],
+             'at':x[i,12],
+             'R0':10**x[i,13]
              }
-             
+    # theta_pop_i = {'jetmodel':'smooth double power law',
+    #          'rho_z':'DTD*SFH',
+    #          'dtd':'pow',
+    #          'thc':10**x[i,0],
+    #          'Lc*':10**x[i,1],
+    #          'a_L':x[i,2],
+    #          'b_L':x[i,3],
+    #          'Epc*':10**x[i,4],
+    #          'a_Ep':x[i,5],
+    #          'b_Ep':x[i,6],
+    #          'thw':10**x[i,7],
+    #          'A':x[i,8],
+    #          's_c':10**x[i,9],
+    #          'y':x[i,10],
+    #          'tdmin':x[i,11],
+    #          'at':x[i,12],
+    #          'R0':10**x[i,13]
+    #          }
+    # theta_pop_i = {'jetmodel':'smooth double power law',
+    #             'rho_z':'SBPL',
+    #             'thc':10**x[i,0],
+    #             'Lc*':10**x[i,1],
+    #             'a_L':x[i,2],
+    #             'b_L':x[i,3],
+    #             'Epc*':10**x[i,4],
+    #             'a_Ep':x[i,5],
+    #             'b_Ep':x[i,6],
+    #             'thw':10**x[i,7],
+    #             'A':x[i,8],
+    #             's_c':10**x[i,9],
+    #             'y':x[i,10],
+    #             'a':x[i,11],
+    #             'b':x[i,12],
+    #             'zp':x[i,13]
+    #             }
+    
+    # theta_pop2_i = {'jetmodel':'smooth double power law',
+    #             'rho_z':'DTD*SFH',
+    #             'dtd':'lognorm',
+    #             'thc':10**x2[i,0],
+    #             'Lc*':10.**x2[i,1],
+    #             'a_L':x2[i,2],
+    #             'b_L':x2[i,3],
+    #             'Epc*':10.**x2[i,4],
+    #             'a_Ep':x2[i,5],
+    #             'b_Ep':x2[i,6],
+    #             'thw':10.**x2[i,7],
+    #             'A':x2[i,8],
+    #             's_c':10.**x2[i,9],
+    #             'y':x2[i,10],
+    #             'mu_td':x2[i,11],
+    #             'sigma_td':x2[i,12]
+    #             }
     theta_pop2_i = {'jetmodel':'smooth double power law',
+             'rho_z':'DTD*SFH',
+             'dtd':'lognorm',
              'thc':10**x2[i,0],
-             'Lc*':10**x2[i,1],
+             'Lc*':10.**x2[i,1],
              'a_L':x2[i,2],
              'b_L':x2[i,3],
-             'Epc*':10**x2[i,4],
+             'Epc*':10.**x2[i,4],
              'a_Ep':x2[i,5],
              'b_Ep':x2[i,6],
-             'thw':10**x2[i,7],
+             'thw':10.**x2[i,7],
              'A':x2[i,8],
-             's_c':10**x2[i,9],
+             's_c':10.**x2[i,9],
              'y':x2[i,10],
-             'a':x2[i,11],
-             'b':x2[i,12],
-             'zp':x2[i,13]
-             }
+             'mu_td':x2[i,11],
+             'sigma_td':x2[i,12],
+             'R0':10**x2[i,13],
+         }
+    # theta_pop2_i = {'jetmodel':'smooth double power law',
+    #          'rho_z':'DTD*SFH',
+    #          'dtd':'pow',
+    #          'thc':10**x2[i,0],
+    #          'Lc*':10**x2[i,1],
+    #          'a_L':x2[i,2],
+    #          'b_L':x2[i,3],
+    #          'Epc*':800.,
+    #          'a_Ep':x2[i,4],
+    #          'b_Ep':x2[i,5],
+    #          'thw':10**x2[i,6],
+    #          'A':x2[i,7],
+    #          's_c':0.3,
+    #          'y':0.,
+    #          'tdmin':x2[i,8],
+    #          'at':x2[i,9],
+    #          'R0':10**x2[i,10]
+    #         }
+    # theta_pop2_i = {'jetmodel':'smooth double power law',
+    #             'rho_z':'SBPL',
+    #             'thc':10**x2[i,0],
+    #             'Lc*':10**x2[i,1],
+    #             'a_L':x2[i,2],
+    #             'b_L':x2[i,3],
+    #             'Epc*':10**x2[i,4],
+    #             'a_Ep':x2[i,5],
+    #             'b_Ep':x2[i,6],
+    #             'thw':10**x2[i,7],
+    #             'A':x2[i,8],
+    #             's_c':10**x2[i,9],
+    #             'y':x2[i,10],
+    #             'a':x2[i,11],
+    #             'b':x2[i,12],
+    #             'zp':x2[i,13]
+    #             }
 
 
     L,Ep,z,PEpL_contours,cum_L[i],cum_Ep[i],cum_z[i] = grbpop.diagnose.L_Ep_z_contours_and_cumulatives(theta_pop_i,pflim=[plim_Fermi,plim_Swift],pdet='gbm',inst=inst_restframe,alpha=alpha,specmodel=specmodel)
-    L2,Ep2,z2,PEpL_contours2,cum_L2[i],cum_Ep2[i],cum_z2[i] = grbpop.diagnose.L_Ep_z_contours_and_cumulatives(theta_pop2_i,pflim=[plim_Fermi,plim_Swift],pdet=pdet,inst=inst_restframe,alpha=alpha,specmodel=specmodel)
+    L2,Ep2,z2,PEpL_contours2,cum_L2[i],cum_Ep2[i],cum_z2[i] = grbpop.diagnose.L_Ep_z_contours_and_cumulatives(theta_pop2_i,pflim=[plim_Fermi_bias,plim_Swift_bias],pdet='gbm',inst=inst_restframe,alpha=alpha,specmodel=specmodel)
+    # L2,Ep2,z2,PEpL_contours2,cum_L2[i],cum_Ep2[i],cum_z2[i] = grbpop.diagnose.L_Ep_z_contours_and_cumulatives(theta_pop2_i,pflim=[plim_Fermi_bias,plim_Swift_bias],pdet=pdet,inst=inst_restframe,alpha=alpha,specmodel=specmodel)
 
 plt.subplot(221)
 plt.annotate(xy=(0.85,0.05),xycoords='axes fraction',text='(a.1)')
