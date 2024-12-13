@@ -70,8 +70,8 @@ for model in ['Comp','Band']:
         res_Swift[i]=np.abs(pfSi[i]/pfS - 1.)
         res_Fermi[i]=np.abs(pfFi[i]/pfF - 1.)
     
-    plt.plot(Ep,res_Swift,marker='*',ls='None',alpha=0.5,label='Swift/BAT band')
-    plt.plot(Ep,res_Fermi,marker='s',ls='None',alpha=0.5,label='Fermi/GBM band')
+    plt.plot(Ep1,res_Swift,marker='*',ls='None',alpha=0.5,label='Swift/BAT band')
+    plt.plot(Ep1,res_Fermi,marker='s',ls='None',alpha=0.5,label='Fermi/GBM band')
     
     plt.xscale('log')
     plt.yscale('log')
