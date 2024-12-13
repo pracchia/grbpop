@@ -13,8 +13,8 @@ sgrb = gbm.loc[gbm['t90']<2]
 p50300 = sgrb['pflx_comp_phtfluxb'].values
 ep = sgrb['pflx_comp_epeak'].values
 
-# impose quality cuts and flux completeness cut
-clean = (ep>50.) & (ep<1e4) & (p50300>3.5) 
+# impose quality cuts
+clean = (ep>50.) & (ep<1e4) & (p50300>1.) 
 
 ep = ep[clean]
 p50300 = p50300[clean]
@@ -45,6 +45,13 @@ thvs = rng.choice(thv17,Nsamples,p=w/np.sum(w))
 
 # set low-energy photon index to the median of the GBM sample
 alpha=-0.4
+
+# Duty cycles for the detectors
+eta_GBM = 0.59
+
+# Time intervals for Poisson distributions (in years)
+T_GBM = 10.
+T_O3 = 11./12.
 
 
 class log_iso_angle_prior:
@@ -138,6 +145,9 @@ def ptform(u):
     # 'zp':x[13], theta_pop['zp']<0.1, theta_pop['zp']>3.
     x[13] = u[13]*(2.9) + 0.1 # scale and shift to [0.1, 3]
 
+    # 'R0':10**x[14], theta_pop['R0']<1., theta_pop['R0']>1e6:
+    x[14] = u[14]*6. # scale and shift to [log10(1.), log10(1e6)]
+
     return x
 
 
@@ -162,25 +172,31 @@ def loglike(x):
              'y':x[10],
              'a':x[11],
              'b':x[12],
-             'zp':x[13]
+             'zp':x[13],
+             'R0':10**x[14]
              }
     
     pi_EpLz = lambda Epx,Lx,zx:Lx**-1*(1.+zx)**-1 # Ep,L,z prior from spectral analysis
-    pdet = lambda pf,ep: (pf>3.5)*(ep<1e4)*(ep>50.) # detection probability for flux-limited sample analysis
+    pdet = lambda pf,ep: pdet_GBM(pf,ep)*(pf>1.)*(ep<1e4)*(ep>50.) # detection probability for full sample analysis
     
     # evaluate log likelihood
     
     ## observer frame sample
-    logl_obsframe = grbpop.Ppop.obsframe_loglikelihood(p50300,ep,alpha=alpha,specmodel='Comp',inst='Fermi',theta_pop=theta_pop,res=80,pdet=pdet,pflim=3.5,return_logalpha=False)
+    logl_obsframe, log_alpha_obsframe = grbpop.Ppop.obsframe_loglikelihood(p50300,ep,alpha=alpha,specmodel='Comp',inst='Fermi',theta_pop=theta_pop,res=80,pdet=pdet,pflim=None,return_logalpha=True)
     
     ## restframe sample
-    logl_restframe = grbpop.Ppop.restframe_loglikelihood(Lsamples[:-1],Epsamples[:-1],zobs[:-1],alpha=alpha,inst='Fermi+Swift',theta_pop=theta_pop,specmodel='Comp',pdet=None,pflim=[3.5,3.5],prior_EpLz=pi_EpLz,logalpha=None,res=60)
+    logl_restframe = grbpop.Ppop.restframe_loglikelihood(Lsamples[:-1],Epsamples[:-1],zobs[:-1],alpha=alpha,inst='Fermi+Swift',theta_pop=theta_pop,specmodel='Comp',pdet='gbm',pflim=[None,3.5],prior_EpLz=pi_EpLz,logalpha=None,res=60)
     
-    ## viewing angle sample (this is actually a prior in the flux-limited sample analysis, see sec 2.5.3 in Salafia+2023 
-    logl_GW170817 = grbpop.Ppop.known_theta_view_loglikelihood(Lsamples[-1],Epsamples[-1],thvs,theta_pop,prior_EpLz=pi_EpLz)
+    ## viewing angle sample
+    log_alpha_GRB_GW = grbpop.Ppop.logalpha_GRB_GW(theta_pop,pdet_GW='O3')
+    logl_GW170817 = grbpop.Ppop.known_theta_view_loglikelihood(Lsamples[-1],Epsamples[-1],thvs,theta_pop,prior_EpLz=pi_EpLz) + np.log(grbpop.Ppop.Pz(zobs[-1][0],theta_pop=theta_pop))-log_alpha_GRB_GW
+
+    ## Poissonian terms
+    log_poisson_obsframe = grbpop.Ppop.log_poissonian_observer(theta_pop,N_obs=len(p50300),eta=eta_GBM,T=T_GBM,logalpha=log_alpha_obsframe,alpha=alpha,specmodel='Comp',inst='Fermi',res=80,pdet=pdet,pflim=None)
+    log_poisson_GW170817 = grbpop.Ppop.log_poissonian_GRB_GW(theta_pop,N_obs=1,eta=eta_GBM,T=T_O3,logalpha=log_alpha_GRB_GW,pdet_GW='O3')
     
     ## sum all contributions
-    logl = logl_obsframe + logl_restframe + logl_GW170817
+    logl = logl_obsframe + logl_restframe + logl_GW170817 + log_poisson_obsframe + log_poisson_GW170817
     
     if np.isfinite(logl):
         return logl
@@ -193,18 +209,9 @@ if __name__=='__main__':
     from dynesty import pool as dypool
     
     nthreads = 8
-    ndim = 14
+    ndim = 15
     N_effective_sample = 20000
-    # samples_filename = 'nested_samplings/Dynesty_SGRB_flux-limited-sample-analysis.h5'
-    checkpoint_filename = 'nested_samplings/Dynesty_SGRB_flux-limited-sample-analysis.save'
-    # test_u = np.zeros(ndim) + 0.5
-    # test_x = ptform(test_u)
-    
-    # as a cross check
-    # print('Test log likelihood for u[i] = 0.5: ',loglike(test_x))
-    
-    # set number of walkers as 4 times the number of dimensions
-    # nwalkers = ndim*4
+    checkpoint_filename = 'nested_samplings/Dynesty_SGRB_full-sample-analysis_Poisson.save'
     
     print('Starting dynamic nested sampling...')
     # initialize the sampler
@@ -212,20 +219,8 @@ if __name__=='__main__':
         if os.path.exists(checkpoint_filename):
             dsampler = DynamicNestedSampler.restore(checkpoint_filename, pool=pool)
             dsampler.run_nested(resume=True, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename, dlogz_init=0.01, nlive_init=500, nlive_batch=100)
-            # dsampler.run_nested(resume=True, use_stop=False, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename)
         else:
             dsampler = DynamicNestedSampler(pool.loglike, pool.prior_transform, ndim, pool=pool)
             dsampler.run_nested(use_stop=True, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename, dlogz_init=0.01, nlive_init=500, nlive_batch=100)
-            # dsampler.run_nested(use_stop=False, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename)
-
-    # import h5py
-    # # Save samples to an HDF5 file
-    # with h5py.File(samples_filename, 'w') as f:
-    #     f.create_dataset('samples', data=dsampler.results.samples)  # Raw samples
-    #     f.create_dataset('weights', data=dsampler.results.importance_weights)  # Importance weights
-    #     f.create_dataset('logl', data=dsampler.results.logl)  # Log-likelihoods
-    #     f.create_dataset('logwt', data=dsampler.results.logwt)  # Logarithmic weights
-    #     f.create_dataset('logz', data=dsampler.results.logz)  # Log-evidence estimates
-    #     f.create_dataset('logzerr', data=dsampler.results.logzerr)  # Log-evidence uncertainty
 
     print('')
