@@ -36,11 +36,12 @@ z_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/z.npy'))
 tdmin_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/tdmin.npy'))
 at_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/at.npy'))
 rhoz_grid_pow = np.load(os.path.join(here,'dtd_sfh_conv_tables/r_sgrb_pow.npy'))
-Itp_rhoz_pow = RegularGridInterpolator(points=(np.log10(z_grid),tdmin_grid,at_grid),values=np.nan_to_num(rhoz_grid_pow),bounds_error=False)
+Itp_rhoz_pow = RegularGridInterpolator(points=(z_grid,tdmin_grid,at_grid),values=np.nan_to_num(rhoz_grid_pow),bounds_error=False)
 
 mu_td_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/mu_td.npy'))
 sigma_td_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/sigma_td.npy'))
 rhoz_grid_log = np.load(os.path.join(here,'dtd_sfh_conv_tables/r_sgrb_log.npy'))
+# Itp_rhoz_log = RegularGridInterpolator(points=(z_grid,mu_td_grid,sigma_td_grid),values=np.nan_to_num(rhoz_grid_log),bounds_error=False)
 Itp_rhoz_log = RegularGridInterpolator(points=(np.log10(z_grid),mu_td_grid,sigma_td_grid),values=np.nan_to_num(rhoz_grid_log),bounds_error=False)
 
 def PEpLthv(L,Ep,thv,theta_pop=default_theta_pop):
@@ -118,14 +119,24 @@ def Pz(z,theta_pop=default_theta_pop,normalize=True):
     elif theta_pop['rho_z'] == 'DTD*SFH' and theta_pop['dtd'] == 'pow':
         at = theta_pop['at']
         tdmin = theta_pop['tdmin']
-        rhoz = Itp_rhoz_pow((np.log10(z),tdmin,at))
-        rhoz0 = Itp_rhoz_pow((np.log10(z0),tdmin,at))
+        rhoz = Itp_rhoz_pow((z,tdmin,at))
+        rhoz0 = Itp_rhoz_pow((z0,tdmin,at))
 
     elif theta_pop['rho_z'] == 'DTD*SFH' and theta_pop['dtd'] == 'lognorm':
         mu = theta_pop['mu_td']
         sigma = theta_pop['sigma_td']
+        # rhoz = Itp_rhoz_log((z,mu,sigma))
         rhoz = Itp_rhoz_log((np.log10(z),mu,sigma))
+        # rhoz0 = Itp_rhoz_log((z0,mu,sigma))
         rhoz0 = Itp_rhoz_log((np.log10(z0),mu,sigma))
+    
+    else:
+        a = 2.6
+        b = 3.6
+        zp = 2.2
+        rhoz = MD14_SFH(z,a,b,zp)
+        rhoz0 = MD14_SFH(z0,a,b,zp)
+        
     
     pz = np.interp(z,z0,dVdz0)/(1.+z)*rhoz
     pz0 = dVdz0/(1.+z0)*rhoz0
@@ -496,10 +507,17 @@ def log_poissonian_observer(theta_pop,N_obs,eta=0.59,T=13.,logalpha=None,pflim=3
         rhoz = MD14_SFH(z0,theta_pop['a'],theta_pop['b'],theta_pop['zp'])
         rhoz/=rhoz[0]
     elif (theta_pop['rho_z']=='DTD*SFH' and theta_pop['dtd']=='pow'):
-        rhoz = Itp_rhoz_pow((np.log10(z0),theta_pop['tdmin'],theta_pop['at']))
+        rhoz = Itp_rhoz_pow((z0,theta_pop['tdmin'],theta_pop['at']))
         rhoz/=rhoz[0]
     elif (theta_pop['rho_z']=='DTD*SFH' and theta_pop['dtd']=='lognorm'):
+        # rhoz = Itp_rhoz_log((z0,theta_pop['mu_td'],theta_pop['sigma_td']))
         rhoz = Itp_rhoz_log((np.log10(z0),theta_pop['mu_td'],theta_pop['sigma_td']))
+        rhoz/=rhoz[0]
+    else:
+        a = 2.6
+        b = 3.6
+        zp = 2.2
+        rhoz = MD14_SFH(z0,a,b,zp)
         rhoz/=rhoz[0]
     
     pz = dVdz0/(1.+z0)*rhoz*theta_pop['R0']
@@ -538,10 +556,17 @@ def log_poissonian_GRB_GW(theta_pop,N_obs,eta=0.59,T=11./12.,logalpha=None,pflim
         rhoz = MD14_SFH(z0,theta_pop['a'],theta_pop['b'],theta_pop['zp'])
         rhoz/=rhoz[0]
     elif (theta_pop['rho_z']=='DTD*SFH' and theta_pop['dtd']=='pow'):
-        rhoz = Itp_rhoz_pow((np.log10(z0),theta_pop['tdmin'],theta_pop['at']))
+        rhoz = Itp_rhoz_pow((z0,theta_pop['tdmin'],theta_pop['at']))
         rhoz/=rhoz[0]
     elif (theta_pop['rho_z']=='DTD*SFH' and theta_pop['dtd']=='lognorm'):
+        # rhoz = Itp_rhoz_log((z0,theta_pop['mu_td'],theta_pop['sigma_td']))
         rhoz = Itp_rhoz_log((np.log10(z0),theta_pop['mu_td'],theta_pop['sigma_td']))
+        rhoz/=rhoz[0]
+    else:
+        a = 2.6
+        b = 3.6
+        zp = 2.2
+        rhoz = MD14_SFH(z0,a,b,zp)
         rhoz/=rhoz[0]
 
     pz = dVdz0/(1.+z0)*rhoz*theta_pop['R0']
@@ -559,7 +584,7 @@ def log_poissonian_GRB_GW(theta_pop,N_obs,eta=0.59,T=11./12.,logalpha=None,pflim
 
 ### "BIASED" likelihood functions ###
 
-def biased_obsframe_loglikelihood(pf,epbias=800,alpha=-0.4,specmodel='Comp',pflim=3.5,inst='Fermi',theta_pop=default_theta_pop,res=100,pdet='gbm',return_logalpha=False):
+def biased_obsframe_loglikelihood(pf,epbias=800.,alpha=-0.4,specmodel='Comp',pflim=3.5,inst='Fermi',theta_pop=default_theta_pop,res=100,pdet='gbm',return_logalpha=False):
     """
     Loglikelihood contribution from events with unknown redshift. The value for Epeak in the source frame is fixed to study the effects of this bias.
     
@@ -719,11 +744,11 @@ def biased_restframe_loglikelihood(Lobs,zobs,epbias,alpha=-0.4,specmodel='Comp',
     # use posterior samples
     Itp_logPEpL = RegularGridInterpolator(points=(np.log10(Ep),np.log10(L)),values=np.log10(Pepl),bounds_error=False,fill_value=-np.inf) # set up an interpolator of P(Ep,L | theta_pop)
     for i in range(Lobs.shape[0]):
-        logEpL_i = np.reshape((np.log10(np.zeros_like(zobs[i])+epbias),np.log10(Lobs[i])), (2, -1), order='C').T # turn posterior samples into an array of (Ep,L) 2D points
+        logEpL_i = np.reshape((np.log10(np.zeros_like(Lobs[i])+epbias),np.log10(Lobs[i])), (2, -1), order='C').T # turn posterior samples into an array of (Ep,L) 2D points
         if prior_EpLz is None:
             logl_i = np.log(np.mean(10**Itp_logPEpL(logEpL_i)*Pz(zobs[i],theta_pop))) - logalpha
         else:
-            logl_i = np.log(np.mean(10**Itp_logPEpL(logEpL_i)*Pz(zobs[i],theta_pop)/prior_EpLz(np.zeros_like(zobs[i])+epbias,Lobs[i],zobs[i]))) - logalpha
+            logl_i = np.log(np.mean(10**Itp_logPEpL(logEpL_i)*Pz(zobs[i],theta_pop)/prior_EpLz(np.zeros_like(Lobs[i])+epbias,Lobs[i],zobs[i]))) - logalpha
         logl += logl_i
     
     # if the result is not finite, return -np.inf
