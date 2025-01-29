@@ -41,8 +41,7 @@ Itp_rhoz_pow = RegularGridInterpolator(points=(z_grid,tdmin_grid,at_grid),values
 mu_td_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/mu_td.npy'))
 sigma_td_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/sigma_td.npy'))
 rhoz_grid_log = np.load(os.path.join(here,'dtd_sfh_conv_tables/r_sgrb_log.npy'))
-# Itp_rhoz_log = RegularGridInterpolator(points=(z_grid,mu_td_grid,sigma_td_grid),values=np.nan_to_num(rhoz_grid_log),bounds_error=False)
-Itp_rhoz_log = RegularGridInterpolator(points=(np.log10(z_grid),mu_td_grid,sigma_td_grid),values=np.nan_to_num(rhoz_grid_log),bounds_error=False)
+Itp_rhoz_log = RegularGridInterpolator(points=(z_grid,mu_td_grid,sigma_td_grid),values=np.nan_to_num(rhoz_grid_log),bounds_error=False)
 
 def PEpLthv(L,Ep,thv,theta_pop=default_theta_pop):
     """
