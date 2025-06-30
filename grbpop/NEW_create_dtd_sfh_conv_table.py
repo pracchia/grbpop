@@ -23,12 +23,13 @@ def lognormal(td, mu_td, sigma_td):
 # Star formation history parameters (Madau & Fragos 2017)
 a = 2.6
 b = 3.6
+# zp = 3.2
 zp = 2.2
 
 print(f'\nStar formation rate parameters: a = {a}, b = {b}, zp = {zp} \n')
 
 # Setting the grid for the computation
-at = np.linspace(0,5,20)
+at = np.linspace(-1,5,30)
 td_spacing = 0.01 # in Gyr
 tdmin_max = 3.02 # Max minimum time delay, in Gyr
 t_max = cosmo.lookback_time(100).to('Gyr').value

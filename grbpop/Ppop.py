@@ -526,7 +526,7 @@ def log_poissonian_observer(theta_pop,N_obs,eta=0.59,T=13.,logalpha=None,pflim=3
     N_det = eta*R*T*np.exp(logalpha) # Number of detections expected
     logPoisson = N_obs*np.log(N_det) - N_det
     return logPoisson
-
+            
 
 def log_poissonian_GRB_GW(theta_pop,N_obs,eta=0.59,T=11./12.,logalpha=None,pflim=3.5,inst='Fermi',pdet_GRB='gbm',pdet_GW='O3',alpha=-0.5,specmodel='Comp',res=60,thvres=300):
     """
@@ -575,6 +575,277 @@ def log_poissonian_GRB_GW(theta_pop,N_obs,eta=0.59,T=11./12.,logalpha=None,pflim
     logPoisson = N_obs*np.log(N_det) - N_det
     return logPoisson
 
+
+### Jet model without Ep to study when Ep is not considered and fixed to a single value (source frame) 
+def PLthv(L,thv,theta_pop=default_theta_pop):
+    """
+    P(L | thv, lpop)
+    """
+    
+    lLc = theta_pop['Lc*']*ell(thv,theta_pop)
+    TH = np.exp(-(lLc/L)**theta_pop['A'])
+    return theta_pop['A']/(gamma(1.-1./theta_pop['A'])*lLc)*(L/lLc)**(-theta_pop['A'])*TH
+
+
+def PL(L,theta_pop=default_theta_pop,grid=True):
+    """
+    Returns the probability of the peak energy and luminosity P(L | theta_pop) conditioned on the population parameters, that is, the population model
+    for the intrinsic distributions of these quantities. The theta_pop dictionary must contain information about the jet and shock breakout model, including
+    all required parameters.
+    """
+    th = np.logspace(logthvmin,np.log10(np.pi/2.),1000)
+    
+    if not np.isscalar(L) and grid:
+        thg = th.reshape([1,len(th)])
+        Lg = L.reshape([len(L),1])
+        # Epg = Ep.reshape([len(Ep),1,1])
+        
+        PL_th = PLthv(Lg,thg,theta_pop)
+    
+        PL = np.trapz(PL_th*np.sin(thg)*thg,np.log(th),axis=1)
+    elif not np.isscalar(L):
+        Lg = np.expand_dims(L,axis=-1)
+        
+        Lg,thg = np.broadcast_arrays(Lg,th)
+        
+        PL_th = PLthv(Lg,thg,theta_pop)
+    
+        PL = np.trapz(PL_th*np.sin(thg)*thg,np.log(th),axis=-1)
+    
+    else:
+        PL_th = PLthv(L,th,theta_pop)
+    
+        PL = np.trapz(PL_th*np.sin(th)*th,np.log(th),axis=0)
+    
+    return PL
+
+
+def obsframe_loglikelihood_NO_EP(pf,epbias=800.,alpha=-0.4,specmodel='Comp',pflim=3.5,inst='Fermi',theta_pop=default_theta_pop,res=100,pdet='gbm',return_logalpha=False):
+    """
+    Loglikelihood contribution from events with unknown redshift. The value for Epeak in the source frame is fixed to study the effects of this bias.
+    
+    Parameters:
+    - pf: array of peak fluxes of the event sample, in ph cm-2 s-1, assumed to be in the 50-300 keV band and measured on a 64-ms timescale
+    - epbias: biased fixed value to consider for epeak (source frame, in keV)
+    - alpha: low-energy spectral index (scalar, mean value of the sample)
+    - specmodel: spectral model, either 'Comp' or 'Band'
+    - pflim: the sample selection photon flux cut (used only if pdet=None, in which case the sample must be complete in flux!!!)
+    - inst: the instrument that collected these data (currently only Fermi and Swift are implemented)
+    - theta_pop: dictionary specifying the population parameters
+    - res: the grid resolution for integrals
+    - pdet: this can be a function that returns the detection probability (float between 0. and 1.) as a function of the 64-ms photon flux in the 50-300 keV band and the observed Epeak. If a string, it can be 'gbm', in which case our result for Fermi/GBM (Salafia & Ravasio 2022) is used. If this is None, then the Pdet is assumed to be 0 below pflim and 1 above: in this case, the sample must be complete in flux.
+    - return_logalpha: if True, return the computed value of logalpha (i.e. the logarithm of the integral of Ppop*pdet)
+    
+    Returns the value of the loglikelihood.
+    
+    """
+    
+    
+    # construct grid (unequal axes to avoid confusing them)
+    L = np.logspace(logLmin,logLmax,res)
+    # Ep = np.logspace(logEpmin,logEpmax,res+1)
+    z = np.logspace(logzmin,logzmax,res-1)
+    dL = np.interp(z,z0,dL0)
+    
+    # make 3D mesh grid
+    # zg = z.reshape([1,1,len(z)])
+    zg = z.reshape([1,len(z)])
+    # Epg = Ep.reshape([len(Ep),1,1])
+    # Lg = L.reshape([1,len(L),1])
+    Lg = L.reshape([len(L),1])
+    
+    # EpLz = Epg*Lg*zg
+    Lz = Lg*zg
+    
+    # compute population probability distribution
+    pz = Pz(z,theta_pop)
+    # Pepl = PEpL(L,Ep,theta_pop)
+    Pl = PL(L, theta_pop)
+    # Ppop = Pepl.reshape([len(Ep),len(L),1])*pz
+    Ppop = Pl.reshape([len(L),1])*pz
+    # PpopEpLz = Ppop*EpLz
+    PpopLz = Ppop*Lz
+    
+    # compute peak flux on the grid    
+    pf_Lz = pflux.pflux_from_L(zg,epbias,Lg,alpha=alpha,inst=inst,model=specmodel)
+    
+    # compute ep on the grid
+    ep_Lz = epbias/(1.+zg)
+    
+    # detection probability
+    if pdet is None:
+        Pdet = (pf_Lz>=pflim)
+    elif pdet=='gbm':
+        Pdet = pdet_GBM(pf_Lz,ep_Lz)
+    else:
+        Pdet = pdet(pf_Lz,ep_Lz)
+    
+    # compute log(fraction of accessible population above the flux limit)
+    # logalpha = np.log(np.trapz(np.trapz(np.trapz(PpopEpLz*Pdet,np.log(z),axis=2),np.log(L),axis=1),np.log(Ep),axis=0))
+    logalpha = np.log(np.trapz(np.trapz(PpopLz*Pdet,np.log(z),axis=1),np.log(L),axis=0))
+    
+    # set up an interpolator of P(Ep,L | theta_pop)
+    # Itp_logPEpL = RegularGridInterpolator(points=(np.log10(Ep),np.log10(L)),values=np.log10(Pepl),bounds_error=False,fill_value=-np.inf)
+    Itp_logPL = interp1d(np.log10(L),np.log10(Pl),bounds_error=False,fill_value=-np.inf)
+    
+    # start computation of loglikelihood
+    logl = 0.
+    
+    for i in range(len(pf)):
+        L_pepz = pflux.L_from_phflux_biased_ep(z,epbias,pf[i],alpha=alpha,inst=inst,model=specmodel)
+        
+        # logEpL_i = np.reshape((np.log10(np.zeros_like(z)+epbias),np.log10(L_pepz)), (2, -1), order='C').T
+        # logl_i = np.log(np.trapz(z*(1.+z)*L_pepz/pf[i]*np.nan_to_num(10**Itp_logPEpL(logEpL_i))*pz,np.log(z)))-logalpha
+        logl_i = np.log(np.trapz(z*L_pepz/pf[i]*np.nan_to_num(10**Itp_logPL(np.log10(L_pepz)))*pz,np.log(z)))-logalpha
+        
+        logl += logl_i
+    
+    # if the result is not finite, return -np.inf
+    if np.isfinite(logl):
+        if return_logalpha:
+            return logl,logalpha
+        else:
+            return logl
+    else:
+        if return_logalpha:
+            return -np.inf,logalpha
+        else:
+            return -np.inf
+            
+
+def restframe_loglikelihood_NO_EP(Lobs,zobs,epbias,alpha=-0.4,specmodel='Comp',pflim=[None,3.5],inst='Fermi+Swift',theta_pop=default_theta_pop,res=100,pdet=None,logalpha=None,prior_Lz=None,return_logalpha=False):
+    """
+    Loglikelihood contribution from events with a redshift measurement. The value for Epeak in the source frame is fixed to study the effects of this bias.
+    
+    Parameters:
+    - Lobs: array of posterior samples of peak luminosities, in erg/s, shape (N_events,N_samples).
+    - zobs: array of posterior samples of redshift, shape (N_events,N_samples).
+    - epbias: biased fixed value to consider for epeak (source frame, in keV).
+    - alpha: low-energy spectral index (scalar, mean value of the sample)
+    - specmodel: spectral model, either 'Comp' or 'Band'
+    - pflim: the sample selection photon flux cut (the sample must be complete in flux above this cut, unless Pdet is given - see below)
+    - inst: the instrument that collected these data (currently only Fermi and Swift are implemented)
+    - theta_pop: dictionary specifying the population parameters
+    - res: the grid resolution for integrals
+    - pdet: this can be a function that returns the detection probability (float between 0. and 1.) as a function of the 64-ms photon flux in the 50-300 keV band and the observed Epeak. If a string, it can be 'gbm', in which case our result (Salafia, Ravasio, Ghirlanda & Mandel 2023) is used. If this is None, then the Pdet is assumed to be 0 below pflim and 1 above: in this case, the sample must be complete in flux.
+    - logalpha: if given, this is assumed to be the logarithm of the integral of Ppop*pdet, in which case its computation is avoided (to improve performance).
+    - prior_EpLz: if given, this is assumed to yield the prior on Ep, L and z, pi(Ep,L,z). If not given, the prior is assumed uniform on both variables. 
+    - return_logalpha: if True, return logalpha.
+    
+    Returns the value of the loglikelihood.
+    
+    """
+    
+    # make grid & mesh grid
+    L = np.logspace(logLmin,logLmax,res)
+    # Ep = np.logspace(logEpmin,logEpmax,res+1)
+    z = np.logspace(logzmin,logzmax,res-1)
+    
+    # zg = np.copy(z).reshape([1,1,len(z)])
+    zg = np.copy(z).reshape([1,len(z)])
+    # Epg = np.copy(Ep).reshape([len(Ep),1,1])
+    # Lg = np.copy(L).reshape([1,len(L),1])
+    Lg = np.copy(L).reshape([len(L),1])
+        
+    # compute Ppop over the grid, and at the redshifts of the events with a known redshift
+    # Pepl = PEpL(L,Ep,theta_pop)
+    Pl = PL(L, theta_pop)
+        
+    # if logalpha is not given, compute it
+    if logalpha is None:
+
+        # compute Ppop over the grid
+        Ppop = Pl.reshape([len(L),1])*Pz(z,theta_pop) # full grid
+        Lz = Lg*zg
+        PpopLz = Ppop*Lz 
+        # peak photon flux on the grid & conditioned on the known redshifts
+        if inst=='Fermi+Swift':
+            pfGBM_Lz = pflux.pflux_from_L(zg,epbias,Lg,alpha=alpha,model=specmodel,inst='Fermi')
+            pfBAT_Lz = pflux.pflux_from_L(zg,epbias,Lg,alpha=alpha,model=specmodel,inst='Swift')
+        else:
+            pf_Lz = pflux.pflux_from_L(zg,epbias,Lg,alpha=alpha,model=specmodel,inst=inst)
+        
+        ep_Lz = epbias/(1.+zg)
+        
+        if pdet is not None:
+            if pdet=='gbm':
+                if inst=='Fermi+Swift':
+                    Pdet = pdet_GBM(pfGBM_Lz,ep_Lz)*(pfBAT_Lz>pflim[1])
+                else:
+                    Pdet = pdet_GBM(pf_Lz,ep_Lz)
+            else:
+                Pdet = pdet(pf_Lz,ep_Lz)
+        else:
+            if not inst=='Fermi+Swift':
+                pf_Lz = pflux.pflux_from_L(zg,epbias,Lg,alpha=alpha,model=specmodel,inst=inst)
+                Pdet = (pf_Lz>=pflim)
+            else:
+                Pdet = (pfGBM_Lz>=pflim[0])&(pfBAT_Lz>=pflim[1])
+    
+        # log(fraction of accessible events)
+        logalpha = np.log(np.trapz(np.trapz(PpopLz*Pdet,np.log(z),axis=1),np.log(L),axis=0))
+        
+    # compute loglikelihood
+    logl = 0.
+    
+    # use posterior samples
+    # Itp_logPEpL = RegularGridInterpolator(points=(np.log10(Ep),np.log10(L)),values=np.log10(Pepl),bounds_error=False,fill_value=-np.inf) # set up an interpolator of P(Ep,L | theta_pop)
+    # Itp_logPL = interp1d(np.log10(L),np.nan_to_num(np.log10(Pl),nan=-np.inf),bounds_error=False,fill_value=-np.inf) # set up an interpolator of P(L | theta_pop)
+    Itp_logPL = interp1d(np.log10(L),np.log10(Pl),bounds_error=False,fill_value=-np.inf) # set up an interpolator of P(L | theta_pop) # set up an interpolator of P(L | theta_pop)
+    for i in range(Lobs.shape[0]):
+        # logEpL_i = np.reshape((np.log10(np.zeros_like(Lobs[i])+epbias),np.log10(Lobs[i])), (2, -1), order='C').T # turn posterior samples into an array of (Ep,L) 2D points
+        if prior_Lz is None:
+            logl_i = np.log(np.mean(10**Itp_logPL(np.log10(Lobs[i]))*Pz(zobs[i],theta_pop))) - logalpha
+        else:
+            logl_i = np.log(np.mean(10**Itp_logPL(np.log10(Lobs[i]))*Pz(zobs[i],theta_pop)/prior_Lz(Lobs[i],zobs[i]))) - logalpha
+        logl += logl_i
+    
+    # if the result is not finite, return -np.inf
+    if np.isfinite(logl):
+        if return_logalpha:
+            return logl,logalpha
+        else:
+            return logl
+    else:
+        if return_logalpha:
+            return -np.inf,logalpha
+        else:
+            return -np.inf
+
+
+def known_theta_view_loglikelihood_NO_EP(Ls,thvs,theta_pop=default_theta_pop,prior_Lz=None):
+    """
+    Likelihood of an event with known viewing angle, luminosity and Epeak (e.g. GW170817).
+    
+    Parameters:
+    - Ls: peak luminosity samples, in erg/s. 
+    - Eps: *rest frame* peak photon energy samples, in keV.
+    - thvs: viewing angle samples, in rad
+    - theta_pop: dictionary specifying the population parameters
+    - prior_EpLz: if given, this is assumed to yield the prior on Ep, L and z, pi(Ep,L,z). If not given, the prior is assumed uniform on both variables. 
+    
+    Returns the value of the loglikelihood.
+    
+    """
+    
+    # P(L,Ep | theta_pop, theta_view)
+    # PEpLth = PEpLthv(Ls,Eps,thvs,theta_pop)
+    PLth = PLthv(Ls,thvs,theta_pop)
+    
+    # L, Ep prior
+    if prior_Lz is not None:
+        prior = prior_Lz(Ls,0.)
+    else:
+        prior = 1.
+    
+    # Monte Carlo integration 
+    # like = np.mean(PEpLth/prior)
+    like = np.mean(PLth/prior)
+    
+    if np.isfinite(like) and like>0.:
+        return np.log(like)
+    else:
+        return -np.inf
 
 
 ###############################################
