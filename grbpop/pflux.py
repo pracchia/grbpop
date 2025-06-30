@@ -105,7 +105,6 @@ def L_from_phflux_biased_ep(z,epbias,pf,alpha=-0.5,model='Comp',inst='Fermi'):
     else:
         Ep = epbias
     
-    Ep = np.zeros_like(z)+epbias
     dL = np.interp(z,z0,dL0)
     
     if not np.isscalar(z):

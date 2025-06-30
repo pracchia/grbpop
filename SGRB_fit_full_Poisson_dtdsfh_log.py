@@ -71,8 +71,8 @@ def logprior(theta_pop):
     or theta_pop['A']<1.5 or theta_pop['A']>5.\
     or theta_pop['s_c']<0.3 or theta_pop['s_c']>3.\
     or theta_pop['y']<-3. or theta_pop['y']>3.\
-    or theta_pop['mu_td']<0.001 or theta_pop['mu_td']>3.\
-    or theta_pop['sigma_td']<0.001 or theta_pop['sigma_td']>3.\
+    or theta_pop['mu_td']<0.01 or theta_pop['mu_td']>5.\
+    or theta_pop['sigma_td']<0.01 or theta_pop['sigma_td']>5.\
     or theta_pop['R0']<1. or theta_pop['R0']>1e6:
         return -np.inf
     else:
@@ -140,12 +140,15 @@ def loglike(x):
 if __name__=='__main__':
     nthreads = 8
     N_iter = 10000
-    chain_filename = 'chains/SGRB_full_Poisson_dtdsfh_log.h5' # full
+    # chain_filename = 'chains/NEW_SGRB_full_Poisson_dtdsfh_log_zp3.2.h5' # full
+    chain_filename = 'chains/NEW_SGRB_full_Poisson_dtdsfh_log.h5' # full
 
     
     # initial guess vector for 'dtd':'lognorm'
+    #      log(thj)  log(Lj) a_L      b_L   log(Epj) a_Ep    b_Ep  log(thw)  A       log(s_c)    y     mu_td   sigma_td  log(R0) 
+    # x0 = [-1.877,     53.05, 4.091,  4.318, 3.804,    1.2,   2.069, -0.5058, 4.041, -0.01476, -0.0001,   0.1,        2.,   3.48] # Better initial conditions?
     #      log(thj)  log(Lj) a_L      b_L   log(Epj) a_Ep    b_Ep  log(thw)  A       log(s_c)    y    mu_td  sigma_td   log(R0)
-    x0 = [-1.877,     51.55, 4.091, -2.318, 3.804,    1.2,   2.069, -0.5058, 3.041, -0.01476, -0.1149,   2.,       1.,    4.48]
+    x0 = [-1.777,     51.55, 3.091,  2.318, 3.804,    1.2,   2.069, -0.5058, 3.041, -0.01476, -0.1149,   1.,       1.,    4.48]
     
     # as a cross check
     print('Log likelihood at starting guess: ',loglike(x0))

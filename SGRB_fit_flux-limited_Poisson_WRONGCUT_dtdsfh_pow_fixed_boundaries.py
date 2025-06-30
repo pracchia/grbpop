@@ -17,7 +17,8 @@ ep = sgrb['pflx_comp_epeak'].values
 
 # impose a low flux cut to see the the effect of wrong treatment of selection effects
 p_gbm_lim = 2.37
-p_swift_lim = 2.5
+p_swift_lim = 3.5 ### TEST ###
+# p_swift_lim = 2.5
 clean = (p50300>p_gbm_lim) 
 
 ep = ep[clean]
@@ -103,7 +104,7 @@ def loglike(x):
              }
     
     pi_EpLz = lambda Epx,Lx,zx:Lx**-1*(1.+zx)**-1 # Ep,L,z prior from spectral analysis
-    pdet = lambda pf,ep: (pf>p_gbm_lim)*(ep<1e4)*(ep>50.) # detection probability for flux-limited sample analysis
+    pdet = lambda pf,ep: (pf>p_gbm_lim) # detection probability for flux-limited sample analysis
     
     # evaluate log prior
     lpr = logprior(theta_pop)
@@ -134,11 +135,13 @@ def loglike(x):
 if __name__=='__main__':
     nthreads = 8
     N_iter = 10000
-    chain_filename = 'chains/SGRB_flux-limited-sample-analysis_Poisson_WRONGCUT_dtdsfh_pow_fixed_boundaries.h5' # full
+    chain_filename = 'chains/SGRB_flux-limited-sample-analysis_Poisson_WRONGCUT_dtdsfh_pow_fixed_boundaries_swift_3_5.h5' # full
+    # chain_filename = 'chains/SGRB_flux-limited-sample-analysis_Poisson_WRONGCUT_dtdsfh_pow_fixed_boundaries.h5' # full
     
     # initial guess vector
-    #      log(thj)  log(Lj) a_L      b_L    a_Ep    b_Ep  log(thw)    A  tdmin  at  log(R0)   
-    x0 = [-1.877,    51.55, 4.091, -2.318,   1.2,   2.069, -0.5058, 3.041, 0.02, 1.,  2.509]  # starting guess
+    #      log(thj)  log(Lj) a_L      b_L    a_Ep    b_Ep  log(thw)     A  tdmin   at  log(R0)   
+    x0 = [-1.877,    51.55, 2.091,  2.318,   0.04,   5.069,  0.0958, 2.341, 0.02, 0.2,  2.709]  # starting guess
+    # x0 = [-1.877,    51.55, 4.091, -2.318,   1.2,   2.069, -0.5058, 3.041, 0.02, 1.,  2.509]  # starting guess
     
     # as a cross check
     print('Log likelihood at starting guess: ',loglike(x0))

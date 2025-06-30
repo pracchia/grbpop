@@ -112,7 +112,7 @@ def ptform(u):
     x[2] = u[2]*6. # scale to [0, 6] 
     
     # 'b_L':x[3], theta_pop['b_L']<-3., theta_pop['b_L']>6.
-    x[3] = u[3]*9. - 3 # scale and shift to [-3, 9]
+    x[3] = u[3]*9. - 3 # scale and shift to [-3, 6]
 
     # 'Epc*':10.**x[4], theta_pop['Epc*']<1e2, theta_pop['Epc*']>1e5 
     x[4] = u[4]*np.log10(1e5/1e2) + np.log10(1e2) # scale and shift to [log10(1e2), log10(1e5)] 
@@ -121,7 +121,7 @@ def ptform(u):
     x[5] = u[5]*6. # scale to [0, 6]
     
     # 'b_Ep':x[6], theta_pop['b_Ep']<-3., theta_pop['b_Ep']>6.
-    x[6] = u[6]*9. - 3 # scale and shift to [-3, 9]
+    x[6] = u[6]*9. - 3 # scale and shift to [-3, 6]
 
     # 'thw':10.**x[7], theta_pop['thw']<theta_pop['thc'], theta_pop['thw']>np.pi/2.
     thw_prior = log_iso_angle_prior(10**x[0],np.pi/2.)
@@ -210,17 +210,25 @@ if __name__=='__main__':
     
     nthreads = 8
     ndim = 15
-    N_effective_sample = 20000
-    checkpoint_filename = 'nested_samplings/Dynesty_SGRB_full-sample-analysis_Poisson.save'
+    nlive = 500
+    # N_effective_sample = 20000
+    dlogz = 0.01
+    # sample = 'rslice'
+    sample = 'slice'
+    bound = 'multi'
+    # bound = 'balls'
+    checkpoint_filename = 'nested_samplings/Dynesty_SGRB_full-sample-analysis_Poisson_nlive500_dlogz01_post100_slice_multi.save'
     
     print('Starting dynamic nested sampling...')
     # initialize the sampler
     with dypool.Pool(nthreads, loglike=loglike, prior_transform=ptform) as pool:
         if os.path.exists(checkpoint_filename):
             dsampler = DynamicNestedSampler.restore(checkpoint_filename, pool=pool)
-            dsampler.run_nested(resume=True, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename, dlogz_init=0.01, nlive_init=500, nlive_batch=100)
+            # dsampler.run_nested(resume=True, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename, dlogz_init=dlogz, nlive_init=nlive, nlive_batch=100, sample='hslice', wt_kwargs={'pfrac': 1.0})
+            dsampler.run_nested(resume=True, dlogz_init=dlogz, n_effective=None, checkpoint_file=checkpoint_filename, nlive_init=nlive, wt_kwargs={'pfrac': 1.0})
         else:
-            dsampler = DynamicNestedSampler(pool.loglike, pool.prior_transform, ndim, pool=pool)
-            dsampler.run_nested(use_stop=True, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename, dlogz_init=0.01, nlive_init=500, nlive_batch=100)
+            dsampler = DynamicNestedSampler(pool.loglike, pool.prior_transform, ndim, pool=pool, sample=sample, bound=bound)
+            # dsampler.run_nested(use_stop=True, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename, dlogz_init=dlogz, nlive_init=nlive, nlive_batch=100, sample='hslice', wt_kwargs={'pfrac': 1.0})
+            dsampler.run_nested(use_stop=True, dlogz_init=dlogz, n_effective=None, checkpoint_file=checkpoint_filename, nlive_init=nlive, wt_kwargs={'pfrac': 1.0})
 
     print('')

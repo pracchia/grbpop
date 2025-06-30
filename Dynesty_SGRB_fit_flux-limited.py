@@ -105,7 +105,7 @@ def ptform(u):
     x[2] = u[2]*6. # scale to [0, 6] 
     
     # 'b_L':x[3], theta_pop['b_L']<-3., theta_pop['b_L']>6.
-    x[3] = u[3]*9. - 3 # scale and shift to [-3, 9]
+    x[3] = u[3]*9. - 3 # scale and shift to [-3, 6]
 
     # 'Epc*':10.**x[4], theta_pop['Epc*']<1e2, theta_pop['Epc*']>1e5 
     x[4] = u[4]*np.log10(1e5/1e2) + np.log10(1e2) # scale and shift to [log10(1e2), log10(1e5)] 
@@ -114,7 +114,7 @@ def ptform(u):
     x[5] = u[5]*6. # scale to [0, 6]
     
     # 'b_Ep':x[6], theta_pop['b_Ep']<-3., theta_pop['b_Ep']>6.
-    x[6] = u[6]*9. - 3 # scale and shift to [-3, 9]
+    x[6] = u[6]*9. - 3 # scale and shift to [-3, 6]
 
     # 'thw':10.**x[7], theta_pop['thw']<theta_pop['thc'], theta_pop['thw']>np.pi/2.
     thw_prior = log_iso_angle_prior(10**x[0],np.pi/2.)

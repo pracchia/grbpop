@@ -35,7 +35,6 @@ sgrb_gbm = gbm.loc[gbm['t90']<2]
 s_gbm = sgrb_gbm.loc[sgrb_gbm['flux_batse_64']>=p_gbm_lim]
 
 p50300_gbm = s_gbm['flux_batse_64'].values
-ep_gbm = np.zeros_like(p50300_gbm) + 490. # Ep_obs = 490 keV
 
 print(f'Fermi/GBM sample: {len(p50300_gbm)} GRBs')
 
@@ -83,13 +82,15 @@ def ptform(u):
     x = np.array(u)  # copy u
 
     # 'alpha_L':x[0], theta_pop['alpha_L']<0., theta_pop['alpha_L']>5.
-    x[0] = u[0]*5.-1. # scale and shift to [0, 5]
+    # x[0] = u[0]*5. # scale and shift to [0, 5]
+    x[0] = u[0]*5.-3. # scale and shift to [-3, 2]
 
     # 'beta_L':x[1], theta_pop['beta_L']<=0., theta_pop['beta_L']>6.
     x[1] = u[1]*6. # scale to [0, 6]
     
     # 'L_*':10.**x[2], theta_pop['L_*']<1e51, theta_pop['L_*']>1e53
-    x[2] = u[2]*4. + 50. # scale and shift to [log10(1e51), log10(1e53)]
+    # x[2] = u[2]*2. + 51. # scale and shift to [log10(1e51), log10(1e53)]
+    x[2] = u[2]*4. + 50. # scale and shift to [log10(1e50), log10(1e54)]
 
     # 'mu_td':x[3], theta_pop['mu_td']<0.01, theta_pop['mu_td']>5.
     x[3] = u[3]*(5.-0.01) + 0.01 # scale and shift to [0.01, 5]
@@ -114,7 +115,6 @@ def loglike(x):
              'L_*':10.**x[2],
              'L_**':6e49,
              'L_0':5e49,
-             'tdmin':0.02,
              'mu_td':x[3],
              'sigma_td':x[4]
              }
@@ -151,9 +151,9 @@ if __name__=='__main__':
     nthreads = 8
     ndim = 5
     nlive = 100*ndim
-    dlogz = 0.01
+    dlogz = 0.001
     N_effective_sample = 20000
-    checkpoint_filename = 'nested_samplings/WP15_Dynesty_SGRB_fit_LOG.save'
+    checkpoint_filename = 'nested_samplings/WP15_Dynesty_SGRB_fit_LOG_extended.001.save'
     
     print('Starting dynamic nested sampling...')
     # initialize the sampler

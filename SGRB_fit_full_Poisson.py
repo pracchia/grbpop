@@ -141,11 +141,11 @@ def loglike(x):
 if __name__=='__main__':
     nthreads = 8
     N_iter = 10000
-    chain_filename = 'chains/SGRB_full_sample_analysis_Poisson.h5' # full
+    chain_filename = 'chains/SGRB_full_sample_analysis_Poisson_250523.h5' # full
     
     # initial guess vector
-    #      log(thj)  log(Lj) a_L      b_L   log(Epj) a_Ep    b_Ep  log(thw)  A       log(s_c)   y       a      b      zp   log(R0)
-    x0 = [-1.15,     51.55, 4.091, -2.318,  3.97,   1.95,   2.069,  0.0758, 2.71,  -0.01476, -0.1149, 4.631, 4.623, 2.351,  4.48]  # starting guess
+    #      log(thj)  log(Lj) a_L    b_L    log(Epj) a_Ep    b_Ep  log(thw)   A      log(s_c)   y       a      b      zp   log(R0)
+    x0 = [-1.82,     51.88, 3.800, 1.64,    4.13,   1.71,   0.630,  -0.180, 3.36,  -0.07000, -0.3100, 4.480, 8.030, 2.330,  3.38]  # starting guess
     
     # as a cross check
     print('Log likelihood at starting guess: ',loglike(x0))

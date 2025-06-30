@@ -147,6 +147,8 @@ def ptform(u):
     # 'R0':10**x[13], theta_pop['R0']<1., theta_pop['R0']>1e6:
     x[13] = u[13]*6. # scale and shift to [log10(1.), log10(1e6)]
 
+    return x
+
 
 def loglike(x):
     """

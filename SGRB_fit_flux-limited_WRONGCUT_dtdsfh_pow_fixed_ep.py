@@ -19,7 +19,7 @@ ep = sgrb['pflx_comp_epeak'].values
 p_gbm_lim = 2.37
 p_swift_lim = 2.5
 clean = (p50300>p_gbm_lim) 
-efix = 800 # in keV
+efix = 800. # in keV
 
 ep = ep[clean]
 p50300 = p50300[clean]
@@ -67,7 +67,7 @@ def logprior(theta_pop):
     or theta_pop['A']<1.5 or theta_pop['A']>5.\
     or theta_pop['s_c']<0.3 or theta_pop['s_c']>3.\
     or theta_pop['y']<-3. or theta_pop['y']>3.\
-    or theta_pop['tdmin']<0.01 or theta_pop['tdmin']>0.1\
+    or theta_pop['tdmin']<0.01 or theta_pop['tdmin']>3.\
     or theta_pop['at']<0. or theta_pop['at']>3.: 
     # or theta_pop['tdmin']<0.01 or theta_pop['tdmin']>3.\
         return -np.inf
@@ -129,8 +129,7 @@ def loglike(x):
 if __name__=='__main__':
     nthreads = 8
     N_iter = 10000
-    chain_filename = 'chains/SGRB_flux-limited-sample-analysis_WRONGCUT_dtdsfh_pow_fixed_ep_limit_tdmin.h5' # full
-    # chain_filename = 'chains/SGRB_flux-limited-sample-analysis_WRONGCUT_dtdsfh_pow_fixed_ep.h5' # full
+    chain_filename = 'chains/SGRB_flux-limited-sample-analysis_WRONGCUT_dtdsfh_pow_fixed_ep.h5' # full
     
     # initial guess vector for 'dtd':'pow'
     #      log(thj)  log(Lj) a_L      b_L   log(Epj) a_Ep    b_Ep  log(thw)  A       log(s_c)    y    tdmin at   

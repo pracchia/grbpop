@@ -25,7 +25,20 @@ a = 2.6
 b = 3.6
 zp = 2.2
 
+# Star formation history parameters (Madau & Dickinson 2014)
+# a = 2.7
+# b = 2.9
+# zp = 1.9
+
+# SFH with a larger zp (TEST)
+# a = 2.6
+# b = 3.6
+# zp = 5.0
+
+print(f'\nStar formation rate parameters: a = {a}, b = {b}, zp = {zp} \n')
+
 # Setting the grid for the computation
+# at = np.linspace(0,5,20)
 at = np.linspace(0,3,10)
 td_spacing = 0.01
 tdmin_max = 3. # Max minimum time delay
@@ -34,19 +47,18 @@ z_max = 11. # Max redshift for the distribution
 print('Computing grid of time delays and formation redshifts...')
 
 # Grid of time delays
-td_grid = np.arange(0,cosmo.lookback_time(1000).value,td_spacing)
+td_grid = np.arange(0,cosmo.lookback_time(100).to('Gyr').value,td_spacing)
 
 # Grid of redshifts corresponding to the time delays, i.e. formation redshifts
 zf = np.zeros_like(td_grid)
 zf[1:] = z_at_value(cosmo.lookback_time, td_grid[1:]*u.Gyr)
 
 # Grid of minimum time delays
-tdmin = td_grid[td_grid<(tdmin_max + td_spacing/2)] # The td_spacing/2 is to avoid array boundary problems
+tdmin = td_grid[td_grid<(tdmin_max + td_spacing/2.)] # The td_spacing/2 is to avoid array boundary problems
 tdmin = tdmin[1:] # Exclude tdmin = 0
 
 z = zf[zf<=z_max] # Redshifts for the distribution
 r_sgrb_pow = np.zeros([len(z),len(tdmin),len(at)])
-
 
 print('Computing convolutions with power-law time delay distribution...')
 
@@ -70,8 +82,8 @@ for k in tqdm(range(len(tdmin))):
 print('Computing convolutions with log-normal time delay distrbution...')
 
 # Lognormal distribution parameters
-mu_td = np.linspace(0.001,3,25)
-sigma_td = np.linspace(0.001,3,25)
+mu_td = np.linspace(0.001,5,30)
+sigma_td = np.linspace(0.001,5,30)
 r_sgrb_log = np.zeros([len(z),len(mu_td),len(sigma_td)])
 
 for i in tqdm(range(len(z))):

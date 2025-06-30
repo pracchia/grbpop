@@ -105,7 +105,7 @@ def loglike(x):
              }
     
     pi_EpLz = lambda Epx,Lx,zx:Lx**-1*(1.+zx)**-1 # Ep,L,z prior from spectral analysis
-    pdet = lambda pf,ep: (pf>p_gbm_lim)*(ep<1e4)*(ep>50.) # detection probability for flux-limited sample analysis
+    pdet = lambda pf,ep: (pf>p_gbm_lim) # detection probability for flux-limited sample analysis
     
     # evaluate log prior
     lpr = logprior(theta_pop)
@@ -141,7 +141,8 @@ if __name__=='__main__':
     # initial guess vector
 
     #      log(thj)  log(Lj) a_L      b_L     a_Ep    b_Ep  log(thw)     A        a      b    zp   log(R0)  
-    x0 = [-1.877,     51.55, 4.091, -2.318,    1.2,   2.069, -0.5058, 3.041,  3.431, 7.623,  0.9,   2.509]  # starting guess
+    x0 = [-1.877,     51.55, 2.091,  0.451,   0.05,   4.569,  0.1058, 2.381,  4.831, 7.623,  1.5,   2.839]  # starting guess
+    # x0 = [-1.877,     51.55, 4.091, -2.318,    1.2,   2.069, -0.5058, 3.041,  3.431, 7.623,  0.9,   2.509]  # starting guess
     
     # as a cross check
     print('Log likelihood at starting guess: ',loglike(x0))

@@ -49,8 +49,10 @@ Poisson = True
 
 suffix = '' 
 
-chain = 'chains/SGRB_full_Poisson_dtdsfh_lognorm.h5'
-# chain = 'chains/SGRB_full_Poisson_dtdsfh_pow.h5'
+# chain = 'chains/SGRB_full_Poisson_dtdsfh_log.h5'
+# chain = 'chains/SGRB_full_Poisson_dtdsfh_pow_zp_3_2.h5'
+chain = 'chains/NEW_SGRB_full_Poisson_dtdsfh_pow.h5'
+# chain = 'chains/SGRB_full_sample_analysis_Poisson.h5'
 # chain = 'chains/SGRB_full-sample-analysis_dtdsfh_log.h5'
 # chain = 'chains/SGRB_full-sample-analysis_dtdsfh.h5'
 # chain = 'chains/SGRB_flux-limited-sample-analysis_dtdsfh_log.h5'
@@ -58,8 +60,15 @@ chain = 'chains/SGRB_full_Poisson_dtdsfh_lognorm.h5'
 # chain = 'chains/SGRB_full_sample_analysis_Poisson.h5'
 # chain = 'chains/SGRB_GBM_plim_final_newsample.h5'
 
-
-chain2 = 'chains/SGRB_flux-limited-sample-analysis_Poisson_WRONGCUT_dtdsfh_log_tight_boundaries.h5'
+# chain2 = None
+chain2 = 'chains/NEW_SGRB_full_Poisson_dtdsfh_log.h5'
+# chain2 = 'chains/SGRB_full_Poisson_dtdsfh_pow.h5'
+# chain2 = 'chains/SGRB_full_Poisson_dtdsfh_log_zp_3_2.h5'
+# chain2 = 'chains/SGRB_full_Poisson_dtdsfh_log.h5'
+# chain2 = 'chains/SGRB_flux-limited-sample-analysis_Poisson_dtdsfh_log.h5'
+# chain2 = 'chains/SGRB_flux-limited-sample-analysis_Poisson_dtdsfh_pow.h5'
+# chain2 = 'chains/SGRB_flux-limited-sample-analysis_Poisson.h5'
+# chain2 = 'chains/SGRB_flux-limited-sample-analysis_Poisson_WRONGCUT_dtdsfh_log_tight_boundaries.h5'
 # chain2 = 'chains/SGRB_flux-limited-sample-analysis_Poisson_WRONGCUT_dtdsfh_pow_tight_boundaries.h5'
 # chain2 = 'chains/SGRB_flux-limited-sample-analysis_dtdsfh_log.h5'
 # chain2 = 'chains/SGRB_flux-limited-sample-analysis_dtdsfh.h5'
@@ -68,11 +77,19 @@ chain2 = 'chains/SGRB_flux-limited-sample-analysis_Poisson_WRONGCUT_dtdsfh_log_t
 # chain2 = 'chains/SGRB_flux-limited-sample-analysis_Poisson_WRONGCUT_tight_boundaries.h5'
 # chain2 = 'chains/SGRB_flux-limited-sample-analysis_WRONGCUT_tight_boundaries.h5'
 # chain2 = 'chains/SGRB_flux-limited-sample-analysis.h5'
+
+# label_chain_1 = 'SBPL'
+# label_chain_1 = 'Pow'
+# label_chain_1 = 'Full'
+# label_chain_2 = 'DTD*SFH'
+# label_chain_2 = 'Log'
+# label_chain_2 = 'Flux-limited'
+
 specmodel = 'Comp'
 alpha = -0.4
 inst = 'Fermi'
 pflim = 3.5
-N = 10
+N = 1000
 res = 80
 Robs = 212./0.59/10. # Fermi GBM SGRBs with p64>pflim, corrected for FoV and duty cycle
 
@@ -152,7 +169,7 @@ if recompute:
             #  }
             theta_pop = {'jetmodel':'smooth double power law',
              'rho_z':'DTD*SFH',
-             'dtd':'lognorm',
+             'dtd':'pow',
              'thc':10**x[i,0],
              'Lc*':10**x[i,1],
              'a_L':x[i,2],
@@ -164,8 +181,8 @@ if recompute:
              'A':x[i,8],
              's_c':10**x[i,9],
              'y':x[i,10],
-             'mu_td':x[i,11],
-             'sigma_td':x[i,12],
+             'tdmin':x[i,11],
+             'at':x[i,12],
              'R0':10**x[i,13]
              }
              # 'dtd':'lognorm',
@@ -196,7 +213,7 @@ if recompute:
                 # }
                 theta_pop2 = {'jetmodel':'smooth double power law',
                  'rho_z':'DTD*SFH',
-                 'dtd':'lognorm',
+                 'dtd':'pow',
                  'thc':10**x2[i,0],
                  'Lc*':10**x2[i,1],
                  'a_L':x2[i,2],
@@ -208,8 +225,8 @@ if recompute:
                  'A':x2[i,8],
                  's_c':10**x2[i,9],
                  'y':x2[i,10],
-                 'mu_td':x2[i,11],
-                 'sigma_td':x2[i,12],
+                 'tdmin':x2[i,11],
+                 'at':x2[i,12],
                  'R0':10**x2[i,13]
                 }
                  # 'dtd':'lognorm',
@@ -303,8 +320,8 @@ if recompute:
                  # 'tdmin':x2[i,11],
                  # 'at':x2[i,12]
         
-        PEpL = grbpop.Ppop.PEpL(L,Ep,theta_pop,grid=True)
-        PEpL/=np.trapz(np.trapz(PEpL*Epg[:,:,0]*Lg[:,:,0],np.log(L),axis=1),np.log(Ep))
+        # PEpL = grbpop.Ppop.PEpL(L,Ep,theta_pop,grid=True)
+        # PEpL/=np.trapz(np.trapz(PEpL*Epg[:,:,0]*Lg[:,:,0],np.log(L),axis=1),np.log(Ep))
         if (theta_pop['rho_z']=='SBPL'): 
             rhoz = grbpop.Ppop.MD14_SFH(z,theta_pop['a'],theta_pop['b'],theta_pop['zp'])
             rhoz/=rhoz[0]
@@ -319,6 +336,8 @@ if recompute:
         if Poisson:
             R0[i] = theta_pop['R0']
         else:
+            PEpL = grbpop.Ppop.PEpL(L,Ep,theta_pop,grid=True)
+            PEpL/=np.trapz(np.trapz(PEpL*Epg[:,:,0]*Lg[:,:,0],np.log(L),axis=1),np.log(Ep))
             R0[i] = Robs/np.trapz(np.trapz(np.trapz(PEpL.reshape([len(Ep),len(L),1])*psiz.reshape([1,1,len(z)])*Epg*Lg*zg*Pdet,np.log(z),axis=2),np.log(L),axis=1),np.log(Ep))
         R0[i] = np.nan_to_num(R0[i])
         dR0_dlogL[i] = L*R0[i]*grbpop.diagnose.luminosity_function(L,theta_pop)
@@ -327,15 +346,15 @@ if recompute:
         tildeEp[i] = theta_pop['Epc*']*grbpop.structjet.eta(th,theta_pop)
 
         if chain2 is not None:
-            PEpL2 = grbpop.Ppop.PEpL(L,Ep,theta_pop2,grid=True)
-            PEpL2/=np.trapz(np.trapz(PEpL2*Epg[:,:,0]*Lg[:,:,0],np.log(L),axis=1),np.log(Ep))
+            # PEpL2 = grbpop.Ppop.PEpL(L,Ep,theta_pop2,grid=True)
+            # PEpL2/=np.trapz(np.trapz(PEpL2*Epg[:,:,0]*Lg[:,:,0],np.log(L),axis=1),np.log(Ep))
             if (theta_pop2['rho_z']=='SBPL'): 
                 rhoz2 = grbpop.Ppop.MD14_SFH(z,theta_pop2['a'],theta_pop2['b'],theta_pop2['zp'])
                 rhoz2/=rhoz2[0]
-            elif (theta_pop2['rho_z']=='DTD*SFH' and theta_pop['dtd']=='pow'):
+            elif (theta_pop2['rho_z']=='DTD*SFH' and theta_pop2['dtd']=='pow'):
                 rhoz2 = Itp_rhoz_pow((np.log10(z),theta_pop2['tdmin'],theta_pop2['at']))
                 rhoz2/=rhoz2[0]
-            elif (theta_pop2['rho_z']=='DTD*SFH' and theta_pop['dtd']=='lognorm'):
+            elif (theta_pop2['rho_z']=='DTD*SFH' and theta_pop2['dtd']=='lognorm'):
                 rhoz2 = Itp_rhoz_log((np.log10(z),theta_pop2['mu_td'],theta_pop2['sigma_td']))
                 rhoz2/=rhoz2[0]
             
@@ -343,6 +362,8 @@ if recompute:
             if Poisson:
                 R02[i] = theta_pop2 ['R0']
             else: 
+                PEpL2 = grbpop.Ppop.PEpL(L,Ep,theta_pop2,grid=True)
+                PEpL2/=np.trapz(np.trapz(PEpL2*Epg[:,:,0]*Lg[:,:,0],np.log(L),axis=1),np.log(Ep))
                 R02[i] = Robs/np.trapz(np.trapz(np.trapz(PEpL2.reshape([len(Ep),len(L),1])*psiz2.reshape([1,1,len(z)])*Epg*Lg*zg*Pdet,np.log(z),axis=2),np.log(L),axis=1),np.log(Ep))
             R02[i] = np.nan_to_num(R02[i])
             dR0_dlogL2[i] = L*R02[i]*grbpop.diagnose.luminosity_function(L,theta_pop2)
@@ -419,8 +440,7 @@ R00 = np.logspace(-2.,5.4,1000)
 dP_dlogR0 = logR0_kde.pdf(np.log(R00))
 dP_dlogR0_50 = logR0_50_kde.pdf(np.log(R00))
 
-plt.plot(R00,dP_dlogR0,ls='-',color='r',lw=3,label='Completeness')
-# plt.plot(R00,dP_dlogR0,ls='-',color='r',lw=3,label='Full')
+plt.plot(R00,dP_dlogR0,ls='-',color='r',lw=3,label=label_chain_1)
 
 if chain2 is not None:
     logR02_kde = gaussian_kde(np.log(R02))
@@ -429,8 +449,7 @@ if chain2 is not None:
     dP_dlogR02 = logR02_kde.pdf(np.log(R00))
     dP_dlogR02_50 = logR02_50_kde.pdf(np.log(R00))
     
-    plt.plot(R00,dP_dlogR02,ls='--',color='orange',lw=3,label='Incorrect selection effects')
-    # plt.plot(R00,dP_dlogR02,ls='--',color='orange',lw=3,label='Flux-limited')
+    plt.plot(R00,dP_dlogR02,ls='--',color='orange',lw=3,label=label_chain_2)
 
 plt.semilogx()
 plt.xlabel(r'$R_0\,\mathrm{[Gpc^{-3}\,yr^{-1}]}$')
@@ -451,13 +470,11 @@ plt.annotate(xy=((10*1700.)**0.5,0.45),text='BNS\n(GWTC-3)',ha='center',va='top'
 plt.figure('Lum func')
 
 plt.fill_between(L,np.percentile(dR0_dlogL,5.,axis=0),np.percentile(dR0_dlogL,95.,axis=0),edgecolor='r',facecolor='pink',alpha=0.5)
-plt.plot(L,np.percentile(dR0_dlogL,50.,axis=0),'-r',lw=3,label='Completeness')
-# plt.plot(L,np.percentile(dR0_dlogL,50.,axis=0),'-r',lw=3,label='Full')
+plt.plot(L,np.percentile(dR0_dlogL,50.,axis=0),'-r',lw=3,label=label_chain_1)
 
 if chain2 is not None:
     plt.fill_between(L,np.percentile(dR0_dlogL2,5.,axis=0),np.percentile(dR0_dlogL2,90.,axis=0),edgecolor='orange',facecolor='#FFD8C0',alpha=0.5,zorder=-10,ls='--')
-    plt.plot(L,np.percentile(dR0_dlogL2,50.,axis=0),ls='--',color='orange',lw=1.5,alpha=0.5,zorder=-10,label='Incorrect selection effects')
-    # plt.plot(L,np.percentile(dR0_dlogL2,50.,axis=0),ls='--',color='orange',lw=1.5,alpha=0.5,zorder=-10,label='Flux-limited')
+    plt.plot(L,np.percentile(dR0_dlogL2,50.,axis=0),ls='--',color='orange',lw=1.5,alpha=0.5,zorder=-10,label=label_chain_2)
 
 
 # Plot the luminosity distribution of model (a) from Ghirlanda et al. 2016, for comparison
@@ -537,12 +554,10 @@ plt.title(r'$L_\mathrm{min}=10^{50}\,\mathrm{erg/s}$')
 logR0_50_g16_kde = gaussian_kde(np.log(R0_50_g16[R0_50_g16>0.]))
 logR0_50_wp15_kde = gaussian_kde(np.log(R0_50_wp15[R0_50_wp15>0.]))
 
-plt.plot(R00,dP_dlogR0_50,ls='-',color='r',lw=3,label='Completeness')
-# plt.plot(R00,dP_dlogR0_50,ls='-',color='r',lw=3,label='Full')
+plt.plot(R00,dP_dlogR0_50,ls='-',color='r',lw=3,label=label_chain_1)
 
 if chain2 is not None:
-    plt.plot(R00,dP_dlogR02_50,ls='--',color='orange',lw=3,label='Incorrect selection effects')
-    # plt.plot(R00,dP_dlogR02_50,ls='--',color='orange',lw=3,label='Flux-limited')
+    plt.plot(R00,dP_dlogR02_50,ls='--',color='orange',lw=3,label=label_chain_2)
 
 plt.plot(R00,logR0_50_g16_kde.pdf(np.log(R00)),ls='-',color='grey',lw=2,label=r'G16 (a) ',zorder=-1)
 plt.plot(R00,logR0_50_wp15_kde.pdf(np.log(R00)),ls='-',color='blue',lw=2,label=r'W15',zorder=-2)
@@ -569,15 +584,13 @@ plt.title(r'$L_\mathrm{min}=10^{50}\,\mathrm{erg/s}$')
 dN_dVdt *= (R0_50/R0).reshape([N,1])
 
 plt.fill_between(z,np.percentile(dN_dVdt,5.,axis=0),np.percentile(dN_dVdt,95.,axis=0),edgecolor='r',facecolor='pink',alpha=0.5)
-plt.plot(z,np.percentile(dN_dVdt,50.,axis=0),'-r',lw=3,label='Completeness',zorder=3)
-# plt.plot(z,np.percentile(dN_dVdt,50.,axis=0),'-r',lw=3,label='Full',zorder=3)
+plt.plot(z,np.percentile(dN_dVdt,50.,axis=0),'-r',lw=3,label=label_chain_1,zorder=3)
 
 if chain2 is not None:
     dN_dVdt2 *= (R02_50/R02).reshape([N2,1])
     
     plt.fill_between(z,np.percentile(dN_dVdt2,16.,axis=0),np.percentile(dN_dVdt2,84.,axis=0),edgecolor='orange',facecolor='#FFD8C0',alpha=0.5,ls='--')
-    plt.plot(z,np.percentile(dN_dVdt2,50.,axis=0),ls='--',color='orange',lw=1.5,label='Incorrect selection effects',zorder=10)
-    # plt.plot(z,np.percentile(dN_dVdt2,50.,axis=0),ls='--',color='orange',lw=1.5,label='Flux-limited',zorder=10)
+    plt.plot(z,np.percentile(dN_dVdt2,50.,axis=0),ls='--',color='orange',lw=1.5,label=label_chain_2,zorder=10)
 
 #plt.plot(1.+z,dN_dVdt.T[:,:100],color='grey',lw=0.5,alpha=0.5)
 
@@ -710,13 +723,11 @@ plt.annotate(xy=(8,4e50),text=r'$\theta_\mathrm{v}^{-4.7}$',ha='left',va='bottom
 
 # struct
 plt.fill_between(th/np.pi*180.,np.percentile(tildeL,16.,axis=0),np.percentile(tildeL,85.,axis=0),edgecolor='pink',facecolor='#FFB7E1',alpha=0.5,label='90% credible region')
-plt.plot(th/np.pi*180.,np.percentile(tildeL,50.,axis=0),'-r',label=r'Completeness')
-# plt.plot(th/np.pi*180.,np.percentile(tildeL,50.,axis=0),'-r',label=r'Full')
+plt.plot(th/np.pi*180.,np.percentile(tildeL,50.,axis=0),'-r',label=label_chain_1)
 
 if chain2 is not None:
     plt.fill_between(th/np.pi*180.,np.percentile(tildeL2,16.,axis=0),np.percentile(tildeL2,85.,axis=0),edgecolor='#FFDFB7',facecolor='#FFD8C0',alpha=0.5,ls='--',zorder=-2)
-    plt.plot(th/np.pi*180.,np.percentile(tildeL2,50.,axis=0),ls='--',color='orange',zorder=-1,label='Incorrect selection effects')
-    # plt.plot(th/np.pi*180.,np.percentile(tildeL2,50.,axis=0),ls='--',color='orange',zorder=-1,label='Flux-limited')
+    plt.plot(th/np.pi*180.,np.percentile(tildeL2,50.,axis=0),ls='--',color='orange',zorder=-1,label=label_chain_2)
     
 
 plt.contour(dthvL/np.pi*180.,10**dlogL,d2L,levels=[0.5,0.9],colors=['#11FF00','#11FF00'],linestyles=['-','-'],zorder=4,alpha=1.)
@@ -762,13 +773,11 @@ plt.plot(th/np.pi*180.,np.where((th>0.05)&(th<0.4),1.,np.nan)*0.7e3*(th/0.4)**-2
 plt.annotate(xy=(10.,4e3),text=r'$\theta_\mathrm{v}^{-2}$',ha='left',va='bottom',color='grey')
 
 plt.fill_between(th/np.pi*180.,np.percentile(tildeEp,16.,axis=0),np.percentile(tildeEp,84.,axis=0),edgecolor='#54ABFF',facecolor='#54ABFF',alpha=0.5)
-plt.plot(th/np.pi*180.,np.percentile(tildeEp,50.,axis=0),'-b',label=r'Completeness')
-# plt.plot(th/np.pi*180.,np.percentile(tildeEp,50.,axis=0),'-b',label=r'Full')
+plt.plot(th/np.pi*180.,np.percentile(tildeEp,50.,axis=0),'-b',label=label_chain_1)
 
 if chain2 is not None:
     plt.fill_between(th/np.pi*180.,np.percentile(tildeEp2,16.,axis=0),np.percentile(tildeEp2,84.,axis=0),edgecolor='#26E9E9',facecolor='#B6FFFF',alpha=0.5,zorder=-2,ls='--')
-    plt.plot(th/np.pi*180.,np.percentile(tildeEp2,50.,axis=0),ls='--',color='cyan',label=r'Incorrect selection effects',zorder=-1)
-    # plt.plot(th/np.pi*180.,np.percentile(tildeEp2,50.,axis=0),ls='--',color='cyan',label=r'Flux-limited',zorder=-1)
+    plt.plot(th/np.pi*180.,np.percentile(tildeEp2,50.,axis=0),ls='--',color='cyan',label=label_chain_2,zorder=-1)
 
 plt.contour(dthvEp/np.pi*180.,10**dlogEp,d2Ep,levels=[0.5,0.9],colors=['#11FF00','#11FF00'],linestyles=['-','-'],zorder=-1,alpha=0.8)
 
@@ -831,8 +840,7 @@ plt.contourf((L[1:]*L[:-1])**0.5,(Ep[1:]*Ep[:-1])**0.5,Y.T,levels=[1.,2.],colors
 
 
 plt.fill_between([0.],[0.],[0.],edgecolor='teal',facecolor='cyan',label='90% credible region',alpha=0.4,ls='-')
-plt.plot(np.percentile(tildeL,50.,axis=0),np.percentile(tildeEp,50.,axis=0),color='teal',label='Completeness')
-# plt.plot(np.percentile(tildeL,50.,axis=0),np.percentile(tildeEp,50.,axis=0),color='teal',label='Full')
+plt.plot(np.percentile(tildeL,50.,axis=0),np.percentile(tildeEp,50.,axis=0),color='teal',label=label_chain_1)
 
 for i in range(min(100,N)):
     plt.plot(tildeL[i],tildeEp[i],color='grey',lw=0.2,alpha=0.1)
@@ -856,8 +864,7 @@ if chain2 is not None:
     plt.contourf((L[1:]*L[:-1])**0.5,(Ep[1:]*Ep[:-1])**0.5,Y2.T,levels=[1.,1.2],colors=['#FDFF00'],alpha=0.4,linestyles=['-'],zorder=-2)
 
     
-    plt.plot(np.percentile(tildeL2,50.,axis=0),np.percentile(tildeEp2,50.,axis=0),color='#79D900',ls='--',label='Incorrect selection effects',zorder=10)
-    # plt.plot(np.percentile(tildeL2,50.,axis=0),np.percentile(tildeEp2,50.,axis=0),color='#79D900',ls='--',label='Flux-limited',zorder=10)
+    plt.plot(np.percentile(tildeL2,50.,axis=0),np.percentile(tildeEp2,50.,axis=0),color='#79D900',ls='--',label=label_chain_2,zorder=10)
 
 
 # show obs GRBs
