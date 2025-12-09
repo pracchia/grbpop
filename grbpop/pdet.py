@@ -58,6 +58,19 @@ def pdet_GBM(pf,ep):
     else:
         return pdet
 
+def pdet_GW_O5(z,thv):
+    """
+    Projected GW detection efficiency during O4, assuming an HLV network.
+    """
+
+    zz = np.maximum(z,z_grid_GWO4.min())/1.788
+    
+    return Itp_pdetGW_O4(np.vstack([zz,thv]).T)
+    # zz = np.maximum(z,z_grid_GWO3.min())/2.277
+    
+    # return Itp_pdetGW_O3(np.vstack([zz,thv]).T)
+    
+    
 def pdet_GW_O4(z,thv):
     """
     Projected GW detection efficiency during O4, assuming an HLV network.
@@ -66,6 +79,10 @@ def pdet_GW_O4(z,thv):
     zz = np.maximum(z,z_grid_GWO4.min())
     
     return Itp_pdetGW_O4(np.vstack([zz,thv]).T)
+    # zz = np.maximum(z,z_grid_GWO3.min())/1.365
+    
+    # return Itp_pdetGW_O3(np.vstack([zz,thv]).T)
+
 
 def pdet_GW_O3(z,thv):
     """
@@ -75,6 +92,7 @@ def pdet_GW_O3(z,thv):
     zz = np.maximum(z,z_grid_GWO3.min())
     
     return Itp_pdetGW_O3(np.vstack([zz,thv]).T)
+    
 
 def pdet_GW170817(z,thv):
     """

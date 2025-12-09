@@ -2,7 +2,7 @@ import numpy as np
 import emcee
 from scipy.ndimage import gaussian_filter
 from scipy.interpolate import RegularGridInterpolator
-from scipy.integrate import cumtrapz
+from scipy.integrate import cumulative_trapezoid
 from . import Ppop
 from . import pflux
 from . import structjet
@@ -35,6 +35,22 @@ def luminosity_function(L,theta_pop=Ppop.default_theta_pop,res=100):
     PEpL = Ppop.PEpL(L,Ep,theta_pop)
     
     return np.trapz(PEpL*Epg,np.log(Ep),axis=0)
+
+
+def luminosity_function_2breaks(L,theta_pop=Ppop.default_theta_pop,res=100):
+    """
+    Return the luminosity function implied by a population model, evaluated at L (must be an array).
+    """
+
+    Ep = np.logspace(-1,6,res+1)
+    
+    Epg = Ep.reshape([len(Ep),1])
+    Lg = L.reshape([1,len(L)])
+    
+    PEpL = Ppop.PEpL_iso(L,Ep,theta_pop)
+    
+    return np.trapz(PEpL*Epg,np.log(Ep),axis=0)
+    
 
 def L_Ep_z_contours_and_cumulatives(theta_pop=Ppop.default_theta_pop,pflim=5.,inst='Fermi',alpha=-0.5,specmodel='Comp',res=50,smooth=0.5,pdet='gbm',pdetGW=None):
     L = np.logspace(logLmin,logLmax,res+1)
@@ -92,11 +108,11 @@ def L_Ep_z_contours_and_cumulatives(theta_pop=Ppop.default_theta_pop,pflim=5.,in
     PL_obs = np.trapz(Epg[:,:,0]*PEpL_obs,np.log(Ep),axis=0)
     PEp_obs = np.trapz(Lg[:,:,0]*PEpL_obs,np.log(L),axis=1)
     
-    cum_L = cumtrapz(L*PL_obs,np.log(L),initial=0.)
+    cum_L = cumulative_trapezoid(L*PL_obs,np.log(L),initial=0.)
     cum_L/=cum_L[-1]
-    cum_Ep = cumtrapz(Ep*PEp_obs,np.log(Ep),initial=0.)
+    cum_Ep = cumulative_trapezoid(Ep*PEp_obs,np.log(Ep),initial=0.)
     cum_Ep/=cum_Ep[-1]
-    cum_z = cumtrapz(z*Pz_obs,np.log(z),initial=0.)
+    cum_z = cumulative_trapezoid(z*Pz_obs,np.log(z),initial=0.)
     cum_z/=cum_z[-1]
     
     return L,Ep,z,PEpL_obs_contours,cum_L,cum_Ep,cum_z
@@ -136,9 +152,9 @@ def pf_ep_contours_and_cumulatives(theta_pop=Ppop.default_theta_pop,pflim=0.01,i
     Ppf = np.trapz(epg[:,:,0]*Ppfep,np.log(ep),axis=0)
     Pep = np.trapz(pfg[:,:,0]*Ppfep,np.log(pf),axis=1)
     
-    cum_pf = cumtrapz(pf*Ppf,np.log(pf),initial=0.)
+    cum_pf = cumulative_trapezoid(pf*Ppf,np.log(pf),initial=0.)
     cum_pf/=cum_pf[-1]
-    cum_ep = cumtrapz(ep*Pep,np.log(ep),initial=0.)
+    cum_ep = cumulative_trapezoid(ep*Pep,np.log(ep),initial=0.)
     cum_ep/=cum_ep[-1]
     
     return pf,ep,Ppfep_contours,cum_pf,cum_ep
@@ -195,9 +211,9 @@ def core_L_Ep_contours_and_cumulatives(theta_pop=Ppop.default_theta_pop,res=100,
     PL_core = np.trapz(Epg[:,:]*PEpL_core,np.log(Ep),axis=0)
     PEp_core = np.trapz(Lg[:,:]*PEpL_core,np.log(L),axis=1)
     
-    cum_L = cumtrapz(L*PL_core,np.log(L),initial=0.)
+    cum_L = cumulative_trapezoid(L*PL_core,np.log(L),initial=0.)
     cum_L/=cum_L[-1]
-    cum_Ep = cumtrapz(Ep*PEp_core,np.log(Ep),initial=0.)
+    cum_Ep = cumulative_trapezoid(Ep*PEp_core,np.log(Ep),initial=0.)
     cum_Ep/=cum_Ep[-1]
     
     return L,Ep,PEpL_core_contours,cum_L,cum_Ep
@@ -253,8 +269,6 @@ def viewing_angle_distribution(theta_pop=Ppop.default_theta_pop,pflim=0.01,inst=
     
     pthv/=np.trapz(pthv,thv)
     return thv,pthv
-    
-
 
 
 #########################################################
@@ -318,11 +332,11 @@ def BPL_L_Ep_z_contours_and_cumulatives(theta_pop=Ppop.default_theta_pop,pflim=5
     PL_obs = np.trapz(Epg[:,:,0]*PEpL_obs,np.log(Ep),axis=0)
     PEp_obs = np.trapz(Lg[:,:,0]*PEpL_obs,np.log(L),axis=1)
     
-    cum_L = cumtrapz(L*PL_obs,np.log(L),initial=0.)
+    cum_L = cumulative_trapezoid(L*PL_obs,np.log(L),initial=0.)
     cum_L/=cum_L[-1]
-    cum_Ep = cumtrapz(Ep*PEp_obs,np.log(Ep),initial=0.)
+    cum_Ep = cumulative_trapezoid(Ep*PEp_obs,np.log(Ep),initial=0.)
     cum_Ep/=cum_Ep[-1]
-    cum_z = cumtrapz(z*Pz_obs,np.log(z),initial=0.)
+    cum_z = cumulative_trapezoid(z*Pz_obs,np.log(z),initial=0.)
     cum_z/=cum_z[-1]
     
     return L,Ep,z,PEpL_obs_contours,cum_L,cum_Ep,cum_z
@@ -363,9 +377,10 @@ def BPL_pf_ep_contours_and_cumulatives(theta_pop=Ppop.default_theta_pop,pflim=0.
     Ppf = np.trapz(epg[:,:,0]*Ppfep,np.log(ep),axis=0)
     Pep = np.trapz(pfg[:,:,0]*Ppfep,np.log(pf),axis=1)
     
-    cum_pf = cumtrapz(pf*Ppf,np.log(pf),initial=0.)
+    cum_pf = cumulative_trapezoid(pf*Ppf,np.log(pf),initial=0.)
     cum_pf/=cum_pf[-1]
-    cum_ep = cumtrapz(ep*Pep,np.log(ep),initial=0.)
+    cum_ep = cumulative_trapezoid(ep*Pep,np.log(ep),initial=0.)
     cum_ep/=cum_ep[-1]
     
     return pf,ep,Ppfep_contours,cum_pf,cum_ep
+    

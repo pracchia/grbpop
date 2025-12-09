@@ -23,13 +23,13 @@ def lognormal(td, mu_td, sigma_td):
 # Star formation history parameters (Madau & Fragos 2017)
 a = 2.6
 b = 3.6
-# zp = 3.2
 zp = 2.2
+
 
 print(f'\nStar formation rate parameters: a = {a}, b = {b}, zp = {zp} \n')
 
 # Setting the grid for the computation
-at = np.linspace(-1,5,30)
+at = np.linspace(0,5,20)
 td_spacing = 0.01 # in Gyr
 tdmin_max = 3.02 # Max minimum time delay, in Gyr
 t_max = cosmo.lookback_time(100).to('Gyr').value
@@ -39,26 +39,27 @@ z_max = 11. # Max redshift for the distribution
 print('Computing grid of time delays and formation redshifts...')
 
 td_grid = np.arange(0, t_max, td_spacing)
+neo_grid = np.zeros(len(td_grid)+1)
+neo_grid[1:] = td_grid
+neo_grid[1] = 0.005
+td_grid = neo_grid
 tdmin = td_grid[td_grid<=tdmin_max]
+
 zf = np.zeros_like(td_grid)
 zf[1:] = z_at_value(cosmo.lookback_time, td_grid[1:]*u.Gyr) # The grid of redshifts is built in a way that the redshifts are separated by a lookback time of td_spacing
 z_grid = zf[zf<=z_max]
 
-modulus_tdgrid = 3.
-len_td_grid = int((tdmin_max-td_spacing)/td_spacing/modulus_tdgrid) + 1 # The step choosen for the tdmin grid is modulus_tdgrid because (3.00 - 0.01)/0.01 = 299 is divisible by modulus_tdgrid, otherwise it would take too much time... (maybe find a way to not hardcode this...)
+tdmin_index = range(1,len(tdmin),3)
 
-r_sgrb_pow = np.zeros([len(z_grid),len_td_grid,len(at)])
+r_sgrb_pow = np.zeros([len(z_grid),len(tdmin_index),len(at)])
 
 H = cosmo.H(zf).to('1/Gyr').value # Grid of values for H(z)
 
 print('Computing convolutions with power-law time delay distribution...')
 
-tdmin_grid = np.zeros(len_td_grid)
-for i in tqdm(range(1,len(tdmin),int(modulus_tdgrid))):
-    q = int((i-1)/modulus_tdgrid) # tdmin index for the r_sgrb grid
-    tdmin_grid[q] = tdmin[i] # Grid of tdmin values for the interpolation
+for q, i in enumerate(tqdm(tdmin_index)):
     for j, a_t in enumerate(at):
-        dtd_norm = np.trapz((td_grid[i:])**(-a_t)/H[i:]/(1+zf[i:]), zf[i:]) # Normalization factor for the time delay distribution, which depends on tdmin and a_t (we use the tdmin index since the redshift grid the time interval of tdmin)
+        dtd_norm = np.trapezoid((td_grid[i:])**(-a_t)/H[i:]/(1+zf[i:]), zf[i:]) # Normalization factor for the time delay distribution, which depends on tdmin and a_t (we use the tdmin index since the redshift grid the time interval of tdmin)
         for k, z in enumerate(z_grid):
             z_int = zf[k:] # Redshift grid for the integral
             sfh = MD14_SFH(z_int,a,b,zp) # Star formation history
@@ -66,13 +67,56 @@ for i in tqdm(range(1,len(tdmin),int(modulus_tdgrid))):
             tlb_z = td_grid[k] # Lookback time at z
             dtd = np.zeros_like(z_int) # Create the grid for the time delay distribution, being 0 before tdmin...
             dtd[i:] = (tlb_f-tlb_z)**(-a_t) # ...and td^-a_t after (we use the tdmin index since the redshift grid the time interval of tdmin)
-            r_sgrb_pow[k][q][j] = np.trapz(sfh*dtd/dtd_norm/(1+z_int)/H[k:],z_int)
+            r_sgrb_pow[k][q][j] = np.trapezoid(sfh*dtd/dtd_norm/(1+z_int)/H[k:],z_int)
+
+tdmin_grid = tdmin[tdmin_index]
+            
+# # Setting the grid for the computation
+# at = np.linspace(0,5,20)
+# td_spacing = 0.01 # in Gyr
+# tdmin_max = 3.02 # Max minimum time delay, in Gyr
+# t_max = cosmo.lookback_time(100).to('Gyr').value
+# z_max = 11. # Max redshift for the distribution
+
+
+# print('Computing grid of time delays and formation redshifts...')
+
+# td_grid = np.arange(0, t_max, td_spacing)
+# tdmin = td_grid[td_grid<=tdmin_max]
+# zf = np.zeros_like(td_grid)
+# zf[1:] = z_at_value(cosmo.lookback_time, td_grid[1:]*u.Gyr) # The grid of redshifts is built in a way that the redshifts are separated by a lookback time of td_spacing
+# z_grid = zf[zf<=z_max]
+
+# modulus_tdgrid = 3.
+# len_td_grid = int((tdmin_max-td_spacing)/td_spacing/modulus_tdgrid) + 1 # The step choosen for the tdmin grid is modulus_tdgrid because (3.00 - 0.01)/0.01 = 299 is divisible by modulus_tdgrid, otherwise it would take too much time... (maybe find a way to not hardcode this...)
+
+# r_sgrb_pow = np.zeros([len(z_grid),len_td_grid,len(at)])
+
+# H = cosmo.H(zf).to('1/Gyr').value # Grid of values for H(z)
+
+# print('Computing convolutions with power-law time delay distribution...')
+
+# tdmin_grid = np.zeros(len_td_grid)
+# for i in tqdm(range(1,len(tdmin),int(modulus_tdgrid))):
+#     q = int((i-1)/modulus_tdgrid) # tdmin index for the r_sgrb grid
+#     tdmin_grid[q] = tdmin[i] # Grid of tdmin values for the interpolation
+#     for j, a_t in enumerate(at):
+#         dtd_norm = np.trapz((td_grid[i:])**(-a_t)/H[i:]/(1+zf[i:]), zf[i:]) # Normalization factor for the time delay distribution, which depends on tdmin and a_t (we use the tdmin index since the redshift grid the time interval of tdmin)
+#         for k, z in enumerate(z_grid):
+#             z_int = zf[k:] # Redshift grid for the integral
+#             sfh = MD14_SFH(z_int,a,b,zp) # Star formation history
+#             tlb_f = td_grid[k+i:] # Formation lookback times, considering a minimum time delay given by the index "i"
+#             tlb_z = td_grid[k] # Lookback time at z
+#             dtd = np.zeros_like(z_int) # Create the grid for the time delay distribution, being 0 before tdmin...
+#             dtd[i:] = (tlb_f-tlb_z)**(-a_t) # ...and td^-a_t after (we use the tdmin index since the redshift grid the time interval of tdmin)
+#             r_sgrb_pow[k][q][j] = np.trapz(sfh*dtd/dtd_norm/(1+z_int)/H[k:],z_int)
 
 
 
 print('Computing convolutions with log-normal time delay distrbution...')
 
-mu_td = np.linspace(0.01,5,30)
+mu_td = np.linspace(0.001,5,30) # TEST 
+# mu_td = np.linspace(0.01,5,30)
 sigma_td = np.linspace(0.01,5,30)
 r_sgrb_log = np.zeros([len(z_grid),len(mu_td),len(sigma_td)])
 
@@ -84,7 +128,7 @@ for i, mu in enumerate(tqdm(mu_td)):
             tlb_f = td_grid[k:] # Formation lookback times, considering a minimum time delay given by the index "i"
             tlb_z = td_grid[k] # Lookback time at z
             dtd = np.nan_to_num(lognormal(tlb_f-tlb_z, mu, sigma)) # td = 0 ---> dtd = 0
-            r_sgrb_log[k][i][j] = np.trapz(sfh*dtd/(1+z_int)/H[k:],z_int)
+            r_sgrb_log[k][i][j] = np.trapezoid(sfh*dtd/(1+z_int)/H[k:],z_int)
 
 
 print('Saving grids...')
