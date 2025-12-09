@@ -5,7 +5,7 @@ from astropy.cosmology import Planck15 as cosmo
 from .structjet import ell
 from .structjet import eta
 from . import pflux
-from .pdet import pdet_GBM,pdet_GW170817,pdet_GW_O4,pdet_GW_O3
+from .pdet import pdet_GBM,pdet_GW170817,pdet_GW_O5,pdet_GW_O4,pdet_GW_O3
 from .globals import *
 import pathlib
 import os
@@ -36,12 +36,12 @@ z_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/z.npy'))
 tdmin_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/tdmin.npy'))
 at_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/at.npy'))
 rhoz_grid_pow = np.load(os.path.join(here,'dtd_sfh_conv_tables/r_sgrb_pow.npy'))
-Itp_rhoz_pow = RegularGridInterpolator(points=(z_grid,tdmin_grid,at_grid),values=np.nan_to_num(rhoz_grid_pow),bounds_error=False)
+Itp_rhoz_pow = RegularGridInterpolator(points=(z_grid,tdmin_grid,at_grid),values=np.nan_to_num(rhoz_grid_pow),bounds_error=False) 
 
 mu_td_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/mu_td.npy'))
 sigma_td_grid = np.load(os.path.join(here,'dtd_sfh_conv_tables/sigma_td.npy'))
 rhoz_grid_log = np.load(os.path.join(here,'dtd_sfh_conv_tables/r_sgrb_log.npy'))
-Itp_rhoz_log = RegularGridInterpolator(points=(z_grid,mu_td_grid,sigma_td_grid),values=np.nan_to_num(rhoz_grid_log),bounds_error=False)
+Itp_rhoz_log = RegularGridInterpolator(points=(z_grid,mu_td_grid,sigma_td_grid),values=np.nan_to_num(rhoz_grid_log),bounds_error=False) 
 
 def PEpLthv(L,Ep,thv,theta_pop=default_theta_pop):
     """
@@ -341,7 +341,6 @@ def known_theta_view_loglikelihood(Ls,Eps,thvs,theta_pop=default_theta_pop,prior
     
     # P(L,Ep | theta_pop, theta_view)
     PEpLth = PEpLthv(Ls,Eps,thvs,theta_pop)
-    
     # L, Ep prior
     if prior_EpLz is not None:
         prior = prior_EpLz(Eps,Ls,0.)
@@ -394,6 +393,8 @@ def logalpha_GRB_GW(theta_pop,pflim=3.5,inst='Fermi',pdet_GRB='gbm',pdet_GW='O3'
     thvmesh,zmesh = np.broadcast_arrays(thvg,zg)
     if pdet_GW=='GW170817':
         pdetGW_thvz = pdet_GW170817(zmesh.ravel(),thvmesh.ravel()).reshape([1,1,len(thv),len(z)])
+    elif pdet_GW=='O5':
+        pdetGW_thvz = pdet_GW_O5(zmesh.ravel(),thvmesh.ravel()).reshape([1,1,len(thv),len(z)])
     elif pdet_GW=='O4':
         pdetGW_thvz = pdet_GW_O4(zmesh.ravel(),thvmesh.ravel()).reshape([1,1,len(thv),len(z)])
     elif pdet_GW=='O3':
@@ -403,7 +404,6 @@ def logalpha_GRB_GW(theta_pop,pflim=3.5,inst='Fermi',pdet_GRB='gbm',pdet_GW='O3'
     
     # perform integral over thv
     PEpLz_GRBGW = np.trapz(PEpL_thv*pdetGW_thvz*np.sin(thvg)*thvg,np.log(thv),axis=2)*Pz(z,theta_pop).reshape([1,1,len(z)])
-
     # remove thv axis
     Lg = L.reshape([1,len(L),1])
     Epg = Ep.reshape([len(Ep),1,1])
@@ -502,19 +502,23 @@ def log_poissonian_observer(theta_pop,N_obs,eta=0.59,T=13.,logalpha=None,pflim=3
     # Select the normalized sGRB rate density redshift distribution 
     if (theta_pop['rho_z']=='SBPL'): 
         rhoz = MD14_SFH(z0,theta_pop['a'],theta_pop['b'],theta_pop['zp'])
-        rhoz/=rhoz[0]
+        rhoz /= MD14_SFH(0.,theta_pop['a'],theta_pop['b'],theta_pop['zp'])
+        # rhoz/= rhoz[0]
     elif (theta_pop['rho_z']=='DTD*SFH' and theta_pop['dtd']=='pow'):
-        rhoz = Itp_rhoz_pow((z0,theta_pop['tdmin'],theta_pop['at']))
-        rhoz/=rhoz[0]
+        rhoz = Itp_rhoz_pow((z0,theta_pop['tdmin'],theta_pop['at'])) 
+        rhoz /= Itp_rhoz_pow((0.,theta_pop['tdmin'],theta_pop['at'])) 
+        # rhoz/= rhoz[0]
     elif (theta_pop['rho_z']=='DTD*SFH' and theta_pop['dtd']=='lognorm'):
         rhoz = Itp_rhoz_log((z0,theta_pop['mu_td'],theta_pop['sigma_td']))
-        rhoz/=rhoz[0]
+        rhoz /= Itp_rhoz_log((0.,theta_pop['mu_td'],theta_pop['sigma_td']))
+        # rhoz/= rhoz[0]
     else:
         a = 2.6
         b = 3.6
         zp = 2.2
         rhoz = MD14_SFH(z0,a,b,zp)
-        rhoz/=rhoz[0]
+        rhoz /= MD14_SFH(0.,a,b,zp)
+        # rhoz /= rhoz[0]
     
     pz = dVdz0/(1.+z0)*rhoz*theta_pop['R0']
     R = np.trapz(pz,z0) # Total astrophysical rate of events
@@ -550,19 +554,23 @@ def log_poissonian_GRB_GW(theta_pop,N_obs,eta=0.59,T=11./12.,logalpha=None,pflim
     # Select the normalized sGRB rate density redshift distribution 
     if (theta_pop['rho_z']=='SBPL'): 
         rhoz = MD14_SFH(z0,theta_pop['a'],theta_pop['b'],theta_pop['zp'])
-        rhoz/=rhoz[0]
+        rhoz /= MD14_SFH(0.,theta_pop['a'],theta_pop['b'],theta_pop['zp'])
+        # rhoz /= rhoz[0]
     elif (theta_pop['rho_z']=='DTD*SFH' and theta_pop['dtd']=='pow'):
         rhoz = Itp_rhoz_pow((z0,theta_pop['tdmin'],theta_pop['at']))
-        rhoz/=rhoz[0]
+        rhoz /= Itp_rhoz_pow((0.,theta_pop['tdmin'],theta_pop['at']))
+        # rhoz /= rhoz[0]
     elif (theta_pop['rho_z']=='DTD*SFH' and theta_pop['dtd']=='lognorm'):
         rhoz = Itp_rhoz_log((z0,theta_pop['mu_td'],theta_pop['sigma_td']))
-        rhoz/=rhoz[0]
+        rhoz /= Itp_rhoz_log((0.,theta_pop['mu_td'],theta_pop['sigma_td']))
+        # rhoz /= rhoz[0]
     else:
         a = 2.6
         b = 3.6
         zp = 2.2
         rhoz = MD14_SFH(z0,a,b,zp)
-        rhoz/=rhoz[0]
+        rhoz /= MD14_SFH(0.,a,b,zp)
+        # rhoz /= rhoz[0]
 
     pz = dVdz0/(1.+z0)*rhoz*theta_pop['R0']
     R = np.trapz(pz,z0) # Total astrophysical rate of events
@@ -858,17 +866,30 @@ def lum_2break_norm(theta_pop=default_theta_pop):
     """
     Normalization for broken power law for luminosity pdf with two breaks
     """
-    if (theta_pop['alpha_L'] == 0.):
-        alpha_term = np.log(theta_pop['L_*']/theta_pop['L_**'])
-    else:
-        alpha_term = 1/theta_pop['alpha_L'] * ((theta_pop['L_**']/theta_pop['L_*'])**(-theta_pop['alpha_L']) - 1)
+    # if (theta_pop['alpha_L'] == 0.):
+    #     alpha_term = np.log(theta_pop['L_*']/theta_pop['L_**'])
+    # else:
+    #     alpha_term = 1/theta_pop['alpha_L'] * ((theta_pop['L_**']/theta_pop['L_*'])**(-theta_pop['alpha_L']) - 1)
         
-    if (theta_pop['gamma_L'] == 0.):
-        gamma_term = np.log(theta_pop['L_**']/theta_pop['L_0'])
-    else:
-        gamma_term = 1/theta_pop['gamma_L'] * ((theta_pop['L_**']/theta_pop['L_*'])**(-theta_pop['alpha_L'])) * (((theta_pop['L_0']/theta_pop['L_**'])**(-theta_pop['gamma_L'])) - 1)
+    # if (theta_pop['gamma_L'] == 0.):
+    #     gamma_term = np.log(theta_pop['L_**']/theta_pop['L_0'])
+    # else:
+    #     gamma_term = 1/theta_pop['gamma_L'] * ((theta_pop['L_**']/theta_pop['L_*'])**(-theta_pop['alpha_L'])) * (((theta_pop['L_0']/theta_pop['L_**'])**(-theta_pop['gamma_L'])) - 1)
 
-    return alpha_term + 1/theta_pop['beta_L'] + gamma_term
+    # return alpha_term + 1/theta_pop['beta_L'] + gamma_term
+    if (theta_pop['alpha_L'] == 0.):
+        alpha_term = theta_pop['L_*'] * np.log(theta_pop['L_*']/theta_pop['L_**'])
+    else:
+        alpha_term = theta_pop['L_*']/theta_pop['alpha_L'] * ((theta_pop['L_*']/theta_pop['L_**'])**(theta_pop['alpha_L']) - 1)
+
+    beta_term = theta_pop['L_*']/theta_pop['beta_L']
+    
+    if (theta_pop['gamma_L'] == 0.):
+        gamma_term = theta_pop['L_*'] * ((theta_pop['L_*']/theta_pop['L_**'])**(theta_pop['alpha_L'])) * np.log(theta_pop['L_**']/theta_pop['L_0'])
+    else:
+        gamma_term = theta_pop['L_*']/theta_pop['gamma_L'] * ((theta_pop['L_*']/theta_pop['L_**'])**(theta_pop['alpha_L'])) * ((theta_pop['L_**']/theta_pop['L_0'])**(theta_pop['gamma_L']) - 1)
+
+    return alpha_term + beta_term + gamma_term
 
 
 def lum_2breaks_pdf(L, theta_pop=default_theta_pop):
@@ -879,10 +900,14 @@ def lum_2breaks_pdf(L, theta_pop=default_theta_pop):
     L_star and L_doublestar are, respectively, the higher and lower luminosity values where the break in the power law happens.
     """
     phi = np.zeros_like(L)
-    phi[L < theta_pop['L_*']] = L[L < theta_pop['L_*']]**(-theta_pop['alpha_L']-1) * (theta_pop['L_*'])**theta_pop['alpha_L']
-    phi[L >= theta_pop['L_*']] = L[L >= theta_pop['L_*']]**(-theta_pop['beta_L']-1) * (theta_pop['L_*'])**theta_pop['beta_L']
-    phi[L <= theta_pop['L_**']] = L[L <= theta_pop['L_**']]**(-theta_pop['gamma_L']-1) * theta_pop['L_**']**theta_pop['gamma_L'] * ((theta_pop['L_**']/theta_pop['L_*'])**(-theta_pop['alpha_L']))
-    phi[L < theta_pop['L_0']] = 0. ### ZEROS MAY CREATE A PROBLEM? Yes...
+    phi[L < theta_pop['L_*']] = (L[L < theta_pop['L_*']]/theta_pop['L_*'])**(-theta_pop['alpha_L']-1)
+    phi[L >= theta_pop['L_*']] = (L[L >= theta_pop['L_*']]/theta_pop['L_*'])**(-theta_pop['beta_L']-1)
+    phi[L <= theta_pop['L_**']] = (L[L <= theta_pop['L_**']]/theta_pop['L_**'])**(-theta_pop['gamma_L']-1) * ((theta_pop['L_**']/theta_pop['L_*'])**(-theta_pop['alpha_L']-1))
+    phi[L < theta_pop['L_0']] = 0.
+    # phi[L < theta_pop['L_*']] = L[L < theta_pop['L_*']]**(-theta_pop['alpha_L']-1) * (theta_pop['L_*'])**theta_pop['alpha_L']
+    # phi[L >= theta_pop['L_*']] = L[L >= theta_pop['L_*']]**(-theta_pop['beta_L']-1) * (theta_pop['L_*'])**theta_pop['beta_L']
+    # phi[L <= theta_pop['L_**']] = L[L <= theta_pop['L_**']]**(-theta_pop['gamma_L']-1) * theta_pop['L_**']**theta_pop['gamma_L'] * ((theta_pop['L_**']/theta_pop['L_*'])**(-theta_pop['alpha_L']))
+    # phi[L < theta_pop['L_0']] = 0. ### ZEROS MAY CREATE A PROBLEM? Yes...
     return phi/lum_2break_norm(theta_pop)
 
 
@@ -890,7 +915,8 @@ def PEpL_iso_lum_2breaks(L,Ep,theta_pop=default_theta_pop):
     """
     P(Ep,L_iso | theta_pop) using a broken power law to describe the luminosity probability distribution.
     """
-    return np.exp(-0.5*(np.log((theta_pop['L_**']/L)**theta_pop['y']*Ep/theta_pop['E_p*'])/theta_pop['s_c'])**2.)/(Ep*np.sqrt(2.*np.pi)*theta_pop['s_c'])*lum_2breaks_pdf(L, theta_pop)
+    # return np.exp(-0.5*(np.log((theta_pop['L_**']/L)**theta_pop['y']*Ep/theta_pop['E_p*'])/theta_pop['s_c'])**2.)/(Ep*np.sqrt(2.*np.pi)*theta_pop['s_c'])*lum_2breaks_pdf(L, theta_pop)
+    return np.exp(-0.5*(np.log((theta_pop['L_*']/L)**theta_pop['y']*Ep/theta_pop['E_p*'])/theta_pop['s_c'])**2.)/(Ep*np.sqrt(2.*np.pi)*theta_pop['s_c'])*lum_2breaks_pdf(L, theta_pop)
     
 
 def PEpL_iso(L,Ep,theta_pop=default_theta_pop,grid=True):
@@ -1146,27 +1172,28 @@ def restframe_loglikelihood_lum2breaks(Lobs,Epobs,zobs,alpha=-0.4,specmodel='Com
             return -np.inf
 
 
-def logalpha_joint_detection(theta_pop,pflim=3.5,inst='Fermi',pdet='gbm',pdet_GW='O3',alpha=-0.4,specmodel='Comp',res=100):
-    
-    # construct grid (unequal axes to avoid confusing them)
-    L = np.logspace(logLmin,logLmax,res)
-    Ep = np.logspace(logEpmin,logEpmax,res+1)
-    z = np.logspace(logzmin,logzmax,res-1)
-    
-    # make 3D mesh grid
-    zg = z.reshape([1,1,len(z)])
-    Epg = Ep.reshape([len(Ep),1,1])
-    Lg = L.reshape([1,len(L),1])
-    
-    EpLz = Epg*Lg*zg
+def logalpha_joint_detection(theta_pop,pflim=3.5,inst='Fermi',pdet_GRB='gbm',pdet_GW='O3',alpha=-0.4,specmodel='Comp',res=100):
 
-    # construct grids (unequal axes to avoid confusing them)
     thv = np.logspace(logthvmin,np.log10(np.pi/2.),res+2)
+    L = np.logspace(logLmin,logLmax,res)
+    Ep = np.logspace(logEpmin,logEpmax,res-1)
+    z = np.logspace(logzmin,logzmax,res+1)
+    
+    thvg = thv.reshape([1,1,len(thv),1])
+    Lg = L.reshape([1,len(L),1,1])
+    Epg = Ep.reshape([len(Ep),1,1,1])
+    zg = z.reshape([1,1,1,len(z)])
+    
+    # P(L,Ep | theta_pop, theta_view)
+    # PEpL_thv = PEpLthv(Lg,Epg,thvg,theta_pop)
+    PEpL_iso_thv = PEpL_iso_lum_2breaks(Lg,Epg,theta_pop)
     
     # Pdet_GW
     thvmesh,zmesh = np.broadcast_arrays(thvg,zg)
     if pdet_GW=='GW170817':
         pdetGW_thvz = pdet_GW170817(zmesh.ravel(),thvmesh.ravel()).reshape([1,1,len(thv),len(z)])
+    elif pdet_GW=='O5':
+        pdetGW_thvz = pdet_GW_O5(zmesh.ravel(),thvmesh.ravel()).reshape([1,1,len(thv),len(z)])
     elif pdet_GW=='O4':
         pdetGW_thvz = pdet_GW_O4(zmesh.ravel(),thvmesh.ravel()).reshape([1,1,len(thv),len(z)])
     elif pdet_GW=='O3':
@@ -1175,31 +1202,28 @@ def logalpha_joint_detection(theta_pop,pflim=3.5,inst='Fermi',pdet='gbm',pdet_GW
         pdetGW_thvz = 1.
     
     # perform integral over thv
-    PEpLz_GRBGW = np.trapz(PEpL_thv*pdetGW_thvz*np.sin(thvg)*thvg,np.log(thv),axis=2)*Pz(z,theta_pop).reshape([1,1,len(z)])
+    PEpLz_GRBGW = np.trapz(PEpL_iso_thv*pdetGW_thvz*np.sin(thvg)*thvg,np.log(thv),axis=2)*Pz(z,theta_pop).reshape([1,1,len(z)])
+    # remove thv axis
+    Lg = L.reshape([1,len(L),1])
+    Epg = Ep.reshape([len(Ep),1,1])
+    zg = z.reshape([1,1,len(z)])
+    
+    # compute pdet_GRB
 
-    # compute population probability distribution
-    pz = Pz(z,theta_pop)
-    Pepl = PEpL_iso(L,Ep,theta_pop)
-    Ppop = Pepl.reshape([len(Ep),len(L),1])*pz
-    PpopEpLz = Ppop*EpLz
-    
-    # compute peak flux on the grid    
-    pf_EpLz = pflux.pflux_from_L(zg,Epg,Lg,alpha=alpha,inst=inst,model=specmodel)
-    
-    # compute ep on the grid
+    ## peak photon flux and observed Epeak on the grid 
+    pf_EpLz = pflux.pflux_from_L(zg,Epg,Lg,alpha=alpha,model=specmodel,inst=inst)
     ep_EpLz = Epg/(1.+zg)
-    
-    # detection probability
-    if pdet is None:
-        Pdet = (pf_EpLz>=pflim)
-    elif pdet=='gbm':
+
+    if pdet_GRB=='gbm':
         Pdet = pdet_GBM(pf_EpLz,ep_EpLz)
+    elif pdet_GRB is not None:
+        Pdet = pdet_GRB(pf_EpLz,ep_EpLz)
     else:
-        Pdet = pdet(pf_EpLz,ep_EpLz)
+        Pdet = (pf_EpLz>pflim)
     
-    # compute log(fraction of accessible population above the flux limit)
-    logalpha = np.log(np.trapz(np.trapz(np.trapz(PpopEpLz*Pdet*pdet_PyGRB(zg),np.log(z),axis=2),np.log(L),axis=1),np.log(Ep),axis=0))
-    # logalpha = np.log(np.trapz(np.trapz(np.trapz(PpopEpLz*Pdet*pdet_PyGRB(zg),np.log(z),axis=2),np.log(L),axis=1),np.log(Ep),axis=0))
+    # perform integral over L,Ep,z
+    logalpha = np.log(np.trapz(np.trapz(np.trapz(PEpLz_GRBGW*Pdet*zg*Epg*Lg,np.log(z),axis=2),np.log(L),axis=1),np.log(Ep),axis=0))
+
     return logalpha
 
 
@@ -1284,14 +1308,24 @@ def log_poissonian_observer_lum_2breaks(theta_pop, N_obs, eta=0.59, T=13., logal
     # Select the normalized sGRB rate density redshift distribution 
     if (theta_pop['rho_z']=='SBPL'): 
         rhoz = MD14_SFH(z0,theta_pop['a'],theta_pop['b'],theta_pop['zp'])
-        rhoz/=rhoz[0]
+        rhoz /= MD14_SFH(0.,theta_pop['a'],theta_pop['b'],theta_pop['zp'])
+        # rhoz /= rhoz[0]
     elif (theta_pop['rho_z']=='DTD*SFH' and theta_pop['dtd']=='pow'):
         rhoz = Itp_rhoz_pow((z0,theta_pop['tdmin'],theta_pop['at']))
-        rhoz/=rhoz[0]
+        rhoz /= Itp_rhoz_pow((0.,theta_pop['tdmin'],theta_pop['at']))
+        # rhoz /= rhoz[0]
     elif (theta_pop['rho_z']=='DTD*SFH' and theta_pop['dtd']=='lognorm'):
         rhoz = Itp_rhoz_log((z0,theta_pop['mu_td'],theta_pop['sigma_td']))
-        rhoz/=rhoz[0]
-    
+        rhoz /= Itp_rhoz_log((0.,theta_pop['mu_td'],theta_pop['sigma_td']))
+        # rhoz /= rhoz[0]
+    else:
+        a = 2.6
+        b = 3.6
+        zp = 2.2
+        rhoz = MD14_SFH(z0,a,b,zp)
+        rhoz /= MD14_SFH(0.,a,b,zp)
+        # rhoz /= rhoz[0]
+
     pz = dVdz0/(1.+z0)*rhoz*theta_pop['R0']
     R = np.trapz(pz,z0) # Total astrophysical rate of events
 
@@ -1323,14 +1357,24 @@ def log_poissonian_joint_detection(theta_pop,N_obs,eta=0.59,T=11./12.,logalpha=N
     # Select the normalized sGRB rate density redshift distribution 
     if (theta_pop['rho_z']=='SBPL'): 
         rhoz = MD14_SFH(z0,theta_pop['a'],theta_pop['b'],theta_pop['zp'])
-        rhoz/=rhoz[0]
+        rhoz /= MD14_SFH(0.,theta_pop['a'],theta_pop['b'],theta_pop['zp'])
+        # rhoz /= rhoz[0]
     elif (theta_pop['rho_z']=='DTD*SFH' and theta_pop['dtd']=='pow'):
         rhoz = Itp_rhoz_pow((z0,theta_pop['tdmin'],theta_pop['at']))
-        rhoz/=rhoz[0]
+        rhoz /= Itp_rhoz_pow((0.,theta_pop['tdmin'],theta_pop['at']))
+        # rhoz /= rhoz[0]
     elif (theta_pop['rho_z']=='DTD*SFH' and theta_pop['dtd']=='lognorm'):
         rhoz = Itp_rhoz_log((z0,theta_pop['mu_td'],theta_pop['sigma_td']))
-        rhoz/=rhoz[0]
-
+        rhoz /= Itp_rhoz_log((0.,theta_pop['mu_td'],theta_pop['sigma_td']))
+        # rhoz /= rhoz[0]
+    else:
+        a = 2.6
+        b = 3.6
+        zp = 2.2
+        rhoz = MD14_SFH(z0,a,b,zp)
+        rhoz /= MD14_SFH(0.,a,b,zp)
+        # rhoz /= rhoz[0]
+    
     pz = dVdz0/(1.+z0)*rhoz*theta_pop['R0']
     R = np.trapz(pz,z0) # Total astrophysical rate of events
 
