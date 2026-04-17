@@ -6,7 +6,7 @@ from scipy.stats import gaussian_kde
 from scipy.ndimage import gaussian_filter
 from scipy.interpolate import RegularGridInterpolator
 import grbpop, os, pathlib
-from inspect_fit_results import read_chain
+from dynesty import DynamicNestedSampler
 here = pathlib.Path(__file__).parent.resolve()
 
 # 2d greedy binning
@@ -40,6 +40,7 @@ def psi_wp15(z):
     """
     return 45./4.1*np.where(z<=0.9,np.exp((z-0.9)/0.39),np.exp(-(z-0.9)/0.26))
 
+
 recompute = True
 # recompute = False
 
@@ -49,59 +50,45 @@ Poisson = True
 
 suffix = '' 
 
-# chain = 'chains/SGRB_full_Poisson_dtdsfh_log.h5'
-# chain = 'chains/SGRB_full_Poisson_dtdsfh_pow_zp_3_2.h5'
-chain = 'chains/NEW_SGRB_full_Poisson_dtdsfh_pow.h5'
-# chain = 'chains/SGRB_full_sample_analysis_Poisson.h5'
-# chain = 'chains/SGRB_full-sample-analysis_dtdsfh_log.h5'
-# chain = 'chains/SGRB_full-sample-analysis_dtdsfh.h5'
-# chain = 'chains/SGRB_flux-limited-sample-analysis_dtdsfh_log.h5'
-# chain = 'chains/SGRB_flux-limited-sample-analysis_dtdsfh.h5'
-# chain = 'chains/SGRB_full_sample_analysis_Poisson.h5'
-# chain = 'chains/SGRB_GBM_plim_final_newsample.h5'
+folder = 'nested_samplings/'
+# chain = 'SUB_nested_JET_flux-limited_Poisson_dtdsfh_POW_dlogz0.001_nlive1400_nbatch280_neff20000.save'
+# chain = 'SUB_nested_JET_flux-limited_Poisson_dtdsfh_POW_WRONGCUT_dlogz0.001_nlive1400_nbatch280_neff20000.save'
 
+chain = 'final_nested_JET_flux-limited_Poisson_dtdsfh_POW_WRONGCUT_dlogz0.001_nlive1400_nbatch280_neff20000.save'
+
+label_chain_1 = 'Pow'
+dsampler1 = DynamicNestedSampler.restore(folder+chain)
+
+folder2 = 'nested_samplings/'
 # chain2 = None
-chain2 = 'chains/NEW_SGRB_full_Poisson_dtdsfh_log.h5'
-# chain2 = 'chains/SGRB_full_Poisson_dtdsfh_pow.h5'
-# chain2 = 'chains/SGRB_full_Poisson_dtdsfh_log_zp_3_2.h5'
-# chain2 = 'chains/SGRB_full_Poisson_dtdsfh_log.h5'
-# chain2 = 'chains/SGRB_flux-limited-sample-analysis_Poisson_dtdsfh_log.h5'
-# chain2 = 'chains/SGRB_flux-limited-sample-analysis_Poisson_dtdsfh_pow.h5'
-# chain2 = 'chains/SGRB_flux-limited-sample-analysis_Poisson.h5'
-# chain2 = 'chains/SGRB_flux-limited-sample-analysis_Poisson_WRONGCUT_dtdsfh_log_tight_boundaries.h5'
-# chain2 = 'chains/SGRB_flux-limited-sample-analysis_Poisson_WRONGCUT_dtdsfh_pow_tight_boundaries.h5'
-# chain2 = 'chains/SGRB_flux-limited-sample-analysis_dtdsfh_log.h5'
-# chain2 = 'chains/SGRB_flux-limited-sample-analysis_dtdsfh.h5'
-# chain2 = 'chains/SGRB_flux-limited-sample-analysis_WRONGCUT_dtdsfh_log_tight_boundaries.h5'
-# chain2 = 'chains/SGRB_flux-limited-sample-analysis_WRONGCUT_dtdsfh_pow_tight_boundaries.h5'
-# chain2 = 'chains/SGRB_flux-limited-sample-analysis_Poisson_WRONGCUT_tight_boundaries.h5'
-# chain2 = 'chains/SGRB_flux-limited-sample-analysis_WRONGCUT_tight_boundaries.h5'
-# chain2 = 'chains/SGRB_flux-limited-sample-analysis.h5'
+# chain2 = 'SUB_nested_JET_flux-limited_Poisson_dtdsfh_LOG_dlogz0.001_nlive1400_nbatch280_neff20000.save'
+# chain2 = 'SUB_nested_JET_flux-limited_Poisson_dtdsfh_LOG_WRONGCUT_dlogz0.001_nlive1400_nbatch280_neff20000.save'
 
-# label_chain_1 = 'SBPL'
-# label_chain_1 = 'Pow'
-# label_chain_1 = 'Full'
-# label_chain_2 = 'DTD*SFH'
-# label_chain_2 = 'Log'
-# label_chain_2 = 'Flux-limited'
+chain2 = 'final_nested_JET_flux-limited_Poisson_dtdsfh_LOG_WRONGCUT_dlogz0.001_nlive1400_nbatch280_neff20000.save'
+
+label_chain_2 = 'Log'
+dsampler2 = DynamicNestedSampler.restore(folder2+chain2)
+
 
 specmodel = 'Comp'
 alpha = -0.4
 inst = 'Fermi'
-pflim = 3.5
-N = 1000
+# pflim = 3.5
+pflim = 2.37
 res = 80
 Robs = 212./0.59/10. # Fermi GBM SGRBs with p64>pflim, corrected for FoV and duty cycle
 
-thin = 3
-
-x,ll = read_chain(chain,burnin_fraction=0.5,thin=thin)
+x = dsampler1.results.samples_equal()
 
 if chain2 is not None:
-    x2,ll2 = read_chain(chain2,burnin_fraction=0.5,thin=thin)
-    # x2,ll2 = read_chain(chain2,burnin_fraction=0.25,thin=thin)
-    N2 = N
+    x2 = dsampler2.results.samples_equal()
 
+# thin = 10
+thin = 1
+
+# N = 1000
+N = int(np.min([len(x),len(x2)])/2)
+N2 = N
 
 th = np.logspace(grbpop.globals.logthvmin,np.log10(np.pi/2.),300)
 L = np.logspace(grbpop.globals.logLmin-2,grbpop.globals.logLmax,res+1)
@@ -151,177 +138,201 @@ if recompute:
         if Poisson:
             # theta_pop = {'jetmodel':'smooth double power law',
             #  'rho_z':'SBPL',
-            #  'thc':10**x[i,0],
-            #  'Lc*':10**x[i,1],
-            #  'a_L':x[i,2],
-            #  'b_L':x[i,3],
-            #  'Epc*':10**x[i,4],
-            #  'a_Ep':x[i,5],
-            #  'b_Ep':x[i,6],
-            #  'thw':10**x[i,7],
-            #  'A':x[i,8],
-            #  's_c':10**x[i,9],
-            #  'y':x[i,10],
-            #  'a':x[i,11],
-            #  'b':x[i,12],
-            #  'zp':x[i,13],
-            #  'R0':10**x[i,14]
+            #  'thc':10**x[-thin*i,0],
+            #  'Lc*':10**x[-thin*i,1],
+            #  'a_L':x[-thin*i,2],
+            #  'b_L':x[-thin*i,3],
+            #  'Epc*':10**x[-thin*i,4],
+            #  'a_Ep':x[-thin*i,5],
+            #  'b_Ep':x[-thin*i,6],
+            #  'thw':10**x[-thin*i,7],
+            #  'A':x[-thin*i,8],
+            #  's_c':10**x[-thin*i,9],
+            #  'y':x[-thin*i,10],
+            #  'a':x[-thin*i,11],
+            #  'b':x[-thin*i,12],
+            #  'zp':x[-thin*i,13],
+            #  'R0':10**x[-thin*i,14]
             #  }
             theta_pop = {'jetmodel':'smooth double power law',
              'rho_z':'DTD*SFH',
              'dtd':'pow',
-             'thc':10**x[i,0],
-             'Lc*':10**x[i,1],
-             'a_L':x[i,2],
-             'b_L':x[i,3],
-             'Epc*':10**x[i,4],
-             'a_Ep':x[i,5],
-             'b_Ep':x[i,6],
-             'thw':10**x[i,7],
-             'A':x[i,8],
-             's_c':10**x[i,9],
-             'y':x[i,10],
-             'tdmin':x[i,11],
-             'at':x[i,12],
-             'R0':10**x[i,13]
+             'thc':10**x[-thin*i,0],
+             'Lc*':10**x[-thin*i,1],
+             'a_L':x[-thin*i,2],
+             'b_L':x[-thin*i,3],
+             'Epc*':10**x[-thin*i,4],
+             'a_Ep':x[-thin*i,5],
+             'b_Ep':x[-thin*i,6],
+             'thw':10**x[-thin*i,7],
+             'A':x[-thin*i,8],
+             's_c':10**x[-thin*i,9],
+             'y':x[-thin*i,10],
+             'tdmin':10**x[-thin*i,11],
+             'at':x[-thin*i,12],
+             'R0':10**x[-thin*i,13]
              }
-             # 'dtd':'lognorm',
-             # 'mu_td':x[i,11],
-             # 'sigma_td':x[i,12]
-             # 'dtd':'pow',
-             # 'tdmin':x[i,11],
-             # 'at':x[i,12]
+            # theta_pop = {'jetmodel':'smooth double power law',
+            #  'rho_z':'DTD*SFH',
+            #  'dtd':'lognorm',
+            #  'thc':10**x[-thin*i,0],
+            #  'Lc*':10**x[-thin*i,1],
+            #  'a_L':x[-thin*i,2],
+            #  'b_L':x[-thin*i,3],
+            #  'Epc*':10**x[-thin*i,4],
+            #  'a_Ep':x[-thin*i,5],
+            #  'b_Ep':x[-thin*i,6],
+            #  'thw':10**x[-thin*i,7],
+            #  'A':x[-thin*i,8],
+            #  's_c':10**x[-thin*i,9],
+            #  'y':x[-thin*i,10],
+            #  'mu_td':x[-thin*i,11],
+            #  'sigma_td':x[-thin*i,12],
+            #  'R0':10**x[-thin*i,13]
+            #  }
 
             if chain2 is not None:
                 # theta_pop2 = {'jetmodel':'smooth double power law',
                 #  'rho_z':'SBPL',
-                #  'thc':10**x2[i,0],
-                #  'Lc*':10**x2[i,1],
-                #  'a_L':x2[i,2],
-                #  'b_L':x2[i,3],
-                #  'Epc*':10**x2[i,4],
-                #  'a_Ep':x2[i,5],
-                #  'b_Ep':x2[i,6],
-                #  'thw':10**x2[i,7],
-                #  'A':x2[i,8],
-                #  's_c':10**x2[i,9],
-                #  'y':x2[i,10],
-                #  'a':x2[i,11],
-                #  'b':x2[i,12],
-                #  'zp':x2[i,13],
-                #  'R0':10**x2[i,14]
+                #  'thc':10**x2[-thin*i,0],
+                #  'Lc*':10**x2[-thin*i,1],
+                #  'a_L':x2[-thin*i,2],
+                #  'b_L':x2[-thin*i,3],
+                #  'Epc*':10**x2[-thin*i,4],
+                #  'a_Ep':x2[-thin*i,5],
+                #  'b_Ep':x2[-thin*i,6],
+                #  'thw':10**x2[-thin*i,7],
+                #  'A':x2[-thin*i,8],
+                #  's_c':10**x2[-thin*i,9],
+                #  'y':x2[-thin*i,10],
+                #  'a':x2[-thin*i,11],
+                #  'b':x2[-thin*i,12],
+                #  'zp':x2[-thin*i,13],
+                #  'R0':10**x2[-thin*i,14]
+                # }
+                # theta_pop2 = {'jetmodel':'smooth double power law',
+                #  'rho_z':'DTD*SFH',
+                #  'dtd':'pow',
+                #  'thc':10**x2[-thin*i,0],
+                #  'Lc*':10**x2[-thin*i,1],
+                #  'a_L':x2[-thin*i,2],
+                #  'b_L':x2[-thin*i,3],
+                #  'Epc*':10**x2[-thin*i,4],
+                #  'a_Ep':x2[-thin*i,5],
+                #  'b_Ep':x2[-thin*i,6],
+                #  'thw':10**x2[-thin*i,7],
+                #  'A':x2[-thin*i,8],
+                #  's_c':10**x2[-thin*i,9],
+                #  'y':x2[-thin*i,10],
+                #  'tdmin':x2[-thin*i,11],
+                #  'at':x2[-thin*i,12],
+                #  'R0':10**x2[-thin*i,13]
                 # }
                 theta_pop2 = {'jetmodel':'smooth double power law',
                  'rho_z':'DTD*SFH',
-                 'dtd':'pow',
-                 'thc':10**x2[i,0],
-                 'Lc*':10**x2[i,1],
-                 'a_L':x2[i,2],
-                 'b_L':x2[i,3],
-                 'Epc*':10**x2[i,4],
-                 'a_Ep':x2[i,5],
-                 'b_Ep':x2[i,6],
-                 'thw':10**x2[i,7],
-                 'A':x2[i,8],
-                 's_c':10**x2[i,9],
-                 'y':x2[i,10],
-                 'tdmin':x2[i,11],
-                 'at':x2[i,12],
-                 'R0':10**x2[i,13]
+                 'dtd':'lognorm',
+                 'thc':10**x2[-thin*i,0],
+                 'Lc*':10**x2[-thin*i,1],
+                 'a_L':x2[-thin*i,2],
+                 'b_L':x2[-thin*i,3],
+                 'Epc*':10**x2[-thin*i,4],
+                 'a_Ep':x2[-thin*i,5],
+                 'b_Ep':x2[-thin*i,6],
+                 'thw':10**x2[-thin*i,7],
+                 'A':x2[-thin*i,8],
+                 's_c':10**x2[-thin*i,9],
+                 'y':x2[-thin*i,10],
+                 'mu_td':10**x2[-thin*i,11],
+                 'sigma_td':10**x2[-thin*i,12],
+                 'R0':10**x2[-thin*i,13]
                 }
-                 # 'dtd':'lognorm',
-                 # 'mu_td':x2[i,11],
-                 # 'sigma_td':x2[i,12]
-                 # 'dtd':'pow',
-                 # 'tdmin':x2[i,11],
-                 # 'at':x2[i,12]
         
         else:
             # theta_pop = {'jetmodel':'smooth double power law',
             #      'rho_z':'SBPL',
-            #      'thc':10**x[i,0],
-            #      'Lc*':10**x[i,1],
-            #      'a_L':x[i,2],
-            #      'b_L':x[i,3],
-            #      'Epc*':10**x[i,4],
-            #      'a_Ep':x[i,5],
-            #      'b_Ep':x[i,6],
-            #      'thw':10**x[i,7],
-            #      'A':x[i,8],
-            #      's_c':10**x[i,9],
-            #      'y':x[i,10],
-            #      'a':x[i,11],
-            #      'b':x[i,12],
-            #      'zp':x[i,13]
+            #      'thc':10**x[-thin*i,0],
+            #      'Lc*':10**x[-thin*i,1],
+            #      'a_L':x[-thin*i,2],
+            #      'b_L':x[-thin*i,3],
+            #      'Epc*':10**x[-thin*i,4],
+            #      'a_Ep':x[-thin*i,5],
+            #      'b_Ep':x[-thin*i,6],
+            #      'thw':10**x[-thin*i,7],
+            #      'A':x[-thin*i,8],
+            #      's_c':10**x[-thin*i,9],
+            #      'y':x[-thin*i,10],
+            #      'a':x[-thin*i,11],
+            #      'b':x[-thin*i,12],
+            #      'zp':x[-thin*i,13]
             #      }
             theta_pop = {'jetmodel':'smooth double power law',
                  'rho_z':'DTD*SFH',
                  'dtd':'lognorm',
-                 'thc':10**x[i,0],
-                 'Lc*':10**x[i,1],
-                 'a_L':x[i,2],
-                 'b_L':x[i,3],
-                 'Epc*':10**x[i,4],
-                 'a_Ep':x[i,5],
-                 'b_Ep':x[i,6],
-                 'thw':10**x[i,7],
-                 'A':x[i,8],
-                 's_c':10**x[i,9],
-                 'y':x[i,10],
-                 'mu_td':x[i,11],
-                 'sigma_td':x[i,12]
+                 'thc':10**x[-thin*i,0],
+                 'Lc*':10**x[-thin*i,1],
+                 'a_L':x[-thin*i,2],
+                 'b_L':x[-thin*i,3],
+                 'Epc*':10**x[-thin*i,4],
+                 'a_Ep':x[-thin*i,5],
+                 'b_Ep':x[-thin*i,6],
+                 'thw':10**x[-thin*i,7],
+                 'A':x[-thin*i,8],
+                 's_c':10**x[-thin*i,9],
+                 'y':x[-thin*i,10],
+                 'mu_td':x[-thin*i,11],
+                 'sigma_td':x[-thin*i,12]
                  }
                  # 'dtd':'lognorm',
-                 # 'mu_td':x[i,11],
-                 # 'sigma_td':x[i,12]
+                 # 'mu_td':x[-thin*i,11],
+                 # 'sigma_td':x[-thin*i,12]
                  # 'dtd':'pow',
-                 # 'tdmin':x[i,11],
-                 # 'at':x[i,12]
+                 # 'tdmin':x[-thin*i,11],
+                 # 'at':x[-thin*i,12]
             
             if chain2 is not None:
                 # theta_pop2 = {'jetmodel':'smooth double power law',
                 #  'rho_z':'SBPL',
-                #  'thc':10**x2[i,0],
-                #  'Lc*':10**x2[i,1],
-                #  'a_L':x2[i,2],
-                #  'b_L':x2[i,3],
-                #  'Epc*':10**x2[i,4],
-                #  'a_Ep':x2[i,5],
-                #  'b_Ep':x2[i,6],
-                #  'thw':10**x2[i,7],
-                #  'A':x2[i,8],
-                #  's_c':10**x2[i,9],
-                #  'y':x2[i,10],
-                #  'a':x2[i,11],
-                #  'b':x2[i,12],
-                #  'zp':x2[i,13]
+                #  'thc':10**x2[-thin*i,0],
+                #  'Lc*':10**x2[-thin*i,1],
+                #  'a_L':x2[-thin*i,2],
+                #  'b_L':x2[-thin*i,3],
+                #  'Epc*':10**x2[-thin*i,4],
+                #  'a_Ep':x2[-thin*i,5],
+                #  'b_Ep':x2[-thin*i,6],
+                #  'thw':10**x2[-thin*i,7],
+                #  'A':x2[-thin*i,8],
+                #  's_c':10**x2[-thin*i,9],
+                #  'y':x2[-thin*i,10],
+                #  'a':x2[-thin*i,11],
+                #  'b':x2[-thin*i,12],
+                #  'zp':x2[-thin*i,13]
                 # }
                 theta_pop2 = {'jetmodel':'smooth double power law',
                  'rho_z':'DTD*SFH',
                  'dtd':'lognorm',
-                 'thc':10**x2[i,0],
-                 'Lc*':10**x2[i,1],
-                 'a_L':x2[i,2],
-                 'b_L':x2[i,3],
-                 'Epc*':10**x2[i,4],
-                 'a_Ep':x2[i,5],
-                 'b_Ep':x2[i,6],
-                 'thw':10**x2[i,7],
-                 'A':x2[i,8],
-                 's_c':10**x2[i,9],
-                 'y':x2[i,10],
-                 'mu_td':x2[i,11],
-                 'sigma_td':x2[i,12]
+                 'thc':10**x2[-thin*i,0],
+                 'Lc*':10**x2[-thin*i,1],
+                 'a_L':x2[-thin*i,2],
+                 'b_L':x2[-thin*i,3],
+                 'Epc*':10**x2[-thin*i,4],
+                 'a_Ep':x2[-thin*i,5],
+                 'b_Ep':x2[-thin*i,6],
+                 'thw':10**x2[-thin*i,7],
+                 'A':x2[-thin*i,8],
+                 's_c':10**x2[-thin*i,9],
+                 'y':x2[-thin*i,10],
+                 'mu_td':x2[-thin*i,11],
+                 'sigma_td':x2[-thin*i,12]
                 }
                  # 'dtd':'lognorm',
-                 # 'mu_td':x2[i,11],
-                 # 'sigma_td':x2[i,12]
+                 # 'mu_td':x2[-thin*i,11],
+                 # 'sigma_td':x2[-thin*i,12]
                  # 'dtd':'pow',
-                 # 'tdmin':x2[i,11],
-                 # 'at':x2[i,12]
+                 # 'tdmin':x2[-thin*i,11],
+                 # 'at':x2[-thin*i,12]
         
         # PEpL = grbpop.Ppop.PEpL(L,Ep,theta_pop,grid=True)
-        # PEpL/=np.trapz(np.trapz(PEpL*Epg[:,:,0]*Lg[:,:,0],np.log(L),axis=1),np.log(Ep))
+        # PEpL/=np.trapezoid(np.trapezoid(PEpL*Epg[:,:,0]*Lg[:,:,0],np.log(L),axis=1),np.log(Ep))
         if (theta_pop['rho_z']=='SBPL'): 
             rhoz = grbpop.Ppop.MD14_SFH(z,theta_pop['a'],theta_pop['b'],theta_pop['zp'])
             rhoz/=rhoz[0]
@@ -337,8 +348,8 @@ if recompute:
             R0[i] = theta_pop['R0']
         else:
             PEpL = grbpop.Ppop.PEpL(L,Ep,theta_pop,grid=True)
-            PEpL/=np.trapz(np.trapz(PEpL*Epg[:,:,0]*Lg[:,:,0],np.log(L),axis=1),np.log(Ep))
-            R0[i] = Robs/np.trapz(np.trapz(np.trapz(PEpL.reshape([len(Ep),len(L),1])*psiz.reshape([1,1,len(z)])*Epg*Lg*zg*Pdet,np.log(z),axis=2),np.log(L),axis=1),np.log(Ep))
+            PEpL/=np.trapezoid(np.trapezoid(PEpL*Epg[:,:,0]*Lg[:,:,0],np.log(L),axis=1),np.log(Ep))
+            R0[i] = Robs/np.trapezoid(np.trapezoid(np.trapezoid(PEpL.reshape([len(Ep),len(L),1])*psiz.reshape([1,1,len(z)])*Epg*Lg*zg*Pdet,np.log(z),axis=2),np.log(L),axis=1),np.log(Ep))
         R0[i] = np.nan_to_num(R0[i])
         dR0_dlogL[i] = L*R0[i]*grbpop.diagnose.luminosity_function(L,theta_pop)
         dN_dVdt[i] = R0[i]*psiz*(1.+z)/dVdz
@@ -347,7 +358,7 @@ if recompute:
 
         if chain2 is not None:
             # PEpL2 = grbpop.Ppop.PEpL(L,Ep,theta_pop2,grid=True)
-            # PEpL2/=np.trapz(np.trapz(PEpL2*Epg[:,:,0]*Lg[:,:,0],np.log(L),axis=1),np.log(Ep))
+            # PEpL2/=np.trapezoid(np.trapezoid(PEpL2*Epg[:,:,0]*Lg[:,:,0],np.log(L),axis=1),np.log(Ep))
             if (theta_pop2['rho_z']=='SBPL'): 
                 rhoz2 = grbpop.Ppop.MD14_SFH(z,theta_pop2['a'],theta_pop2['b'],theta_pop2['zp'])
                 rhoz2/=rhoz2[0]
@@ -363,8 +374,8 @@ if recompute:
                 R02[i] = theta_pop2 ['R0']
             else: 
                 PEpL2 = grbpop.Ppop.PEpL(L,Ep,theta_pop2,grid=True)
-                PEpL2/=np.trapz(np.trapz(PEpL2*Epg[:,:,0]*Lg[:,:,0],np.log(L),axis=1),np.log(Ep))
-                R02[i] = Robs/np.trapz(np.trapz(np.trapz(PEpL2.reshape([len(Ep),len(L),1])*psiz2.reshape([1,1,len(z)])*Epg*Lg*zg*Pdet,np.log(z),axis=2),np.log(L),axis=1),np.log(Ep))
+                PEpL2/=np.trapezoid(np.trapezoid(PEpL2*Epg[:,:,0]*Lg[:,:,0],np.log(L),axis=1),np.log(Ep))
+                R02[i] = Robs/np.trapezoid(np.trapezoid(np.trapezoid(PEpL2.reshape([len(Ep),len(L),1])*psiz2.reshape([1,1,len(z)])*Epg*Lg*zg*Pdet,np.log(z),axis=2),np.log(L),axis=1),np.log(Ep))
             R02[i] = np.nan_to_num(R02[i])
             dR0_dlogL2[i] = L*R02[i]*grbpop.diagnose.luminosity_function(L,theta_pop2)
             dN_dVdt2[i] = R02[i]*psiz2*(1.+z)/dVdz
@@ -401,11 +412,11 @@ else:
         tildeL2 = np.load('cache/results_tildeL2{0}.npy'.format(suffix))
         tildeEp2 = np.load('cache/results_tildeEp2{0}.npy'.format(suffix))
 
-
-R0_50 = np.nan_to_num(np.trapz(dR0_dlogL*(L>=1e50),np.log(L),axis=1))
+L_min_mid = 5e49
+R0_50 = np.nan_to_num(np.trapezoid(dR0_dlogL*(L>=L_min_mid),np.log(L),axis=1))
 
 if chain2 is not None:
-    R02_50 = np.nan_to_num(np.trapz(dR0_dlogL2*(L>=1e50),np.log(L),axis=1))
+    R02_50 = np.nan_to_num(np.trapezoid(dR0_dlogL2*(L>=L_min_mid),np.log(L),axis=1))
 
 
 
@@ -436,9 +447,13 @@ plt.title(r'$L_\mathrm{min}=10^{44}\,\mathrm{erg/s}$')
 logR0_kde = gaussian_kde(np.log(R0))
 logR0_50_kde = gaussian_kde(np.log(R0_50))
 
-R00 = np.logspace(-2.,5.4,1000)
+
+R00 = np.logspace(0.,5.,1000)
 dP_dlogR0 = logR0_kde.pdf(np.log(R00))
 dP_dlogR0_50 = logR0_50_kde.pdf(np.log(R00))
+
+np.save('cache/curves_for_plots/dP_dlogR0/'+chain[:-5]+'.npy', (R00, dP_dlogR0))
+np.save('cache/curves_for_plots/dP_dlogR0_50/'+chain[:-5]+'.npy', (R00, dP_dlogR0_50))
 
 plt.plot(R00,dP_dlogR0,ls='-',color='r',lw=3,label=label_chain_1)
 
@@ -448,6 +463,9 @@ if chain2 is not None:
     
     dP_dlogR02 = logR02_kde.pdf(np.log(R00))
     dP_dlogR02_50 = logR02_50_kde.pdf(np.log(R00))
+    
+    np.save('cache/curves_for_plots/dP_dlogR0/'+chain2[:-5]+'.npy', (R00, dP_dlogR02))
+    np.save('cache/curves_for_plots/dP_dlogR0_50/'+chain2[:-5]+'.npy', (R00, dP_dlogR02_50))
     
     plt.plot(R00,dP_dlogR02,ls='--',color='orange',lw=3,label=label_chain_2)
 
@@ -466,15 +484,28 @@ plt.legend(frameon=False,markerfirst=False,loc='upper right',fontsize=9)
 plt.fill_betweenx([0.,1.1],[10.,10.],[1700.,1700.],edgecolor='grey',facecolor='#EBEBEB',ls='--',zorder=-10)
 plt.annotate(xy=((10*1700.)**0.5,0.45),text='BNS\n(GWTC-3)',ha='center',va='top',color='grey')
 
+
 ################ Luminosity function ##############################
 plt.figure('Lum func')
 
-plt.fill_between(L,np.percentile(dR0_dlogL,5.,axis=0),np.percentile(dR0_dlogL,95.,axis=0),edgecolor='r',facecolor='pink',alpha=0.5)
-plt.plot(L,np.percentile(dR0_dlogL,50.,axis=0),'-r',lw=3,label=label_chain_1)
+dR0_dlogL_m = np.percentile(dR0_dlogL,50.,axis=0)
+dR0_dlogL_u = np.percentile(dR0_dlogL,95.,axis=0)
+dR0_dlogL_l = np.percentile(dR0_dlogL,5.,axis=0)
+
+np.save('cache/curves_for_plots/dR_dlogL/'+chain[:-5]+'.npy',(L, dR0_dlogL_m, dR0_dlogL_u, dR0_dlogL_l))
+
+plt.fill_between(L,dR0_dlogL_l,dR0_dlogL_u,edgecolor='r',facecolor='pink',alpha=0.5)
+plt.plot(L,dR0_dlogL_m,'-r',lw=3,label=label_chain_1)
 
 if chain2 is not None:
-    plt.fill_between(L,np.percentile(dR0_dlogL2,5.,axis=0),np.percentile(dR0_dlogL2,90.,axis=0),edgecolor='orange',facecolor='#FFD8C0',alpha=0.5,zorder=-10,ls='--')
-    plt.plot(L,np.percentile(dR0_dlogL2,50.,axis=0),ls='--',color='orange',lw=1.5,alpha=0.5,zorder=-10,label=label_chain_2)
+    dR0_dlogL2_m = np.percentile(dR0_dlogL2,50.,axis=0)
+    dR0_dlogL2_u = np.percentile(dR0_dlogL2,95.,axis=0)
+    dR0_dlogL2_l = np.percentile(dR0_dlogL2,5.,axis=0)
+    
+    np.save('cache/curves_for_plots/dR_dlogL/'+chain2[:-5]+'.npy',(L, dR0_dlogL2_m, dR0_dlogL2_u, dR0_dlogL2_l))
+    
+    plt.fill_between(L,dR0_dlogL2_l,dR0_dlogL2_u,edgecolor='orange',facecolor='#FFD8C0',alpha=0.5,zorder=-10,ls='--')
+    plt.plot(L,dR0_dlogL2_m,ls='--',color='orange',lw=1.5,alpha=0.5,zorder=-10,label=label_chain_2)
 
 
 # Plot the luminosity distribution of model (a) from Ghirlanda et al. 2016, for comparison
@@ -482,7 +513,7 @@ if chain2 is not None:
 lgg16_corr = np.load('grb_data/l_gg16.npy')
 dNdlogLgg16_corr = np.load('grb_data/dN_dlog10L_corr_gg16.npy')*np.log10(np.exp(1.))
 
-R0_50_g16 = np.trapz(dNdlogLgg16_corr*(lgg16_corr>=1e50),np.log(lgg16_corr),axis=1)
+R0_50_g16 = np.trapezoid(dNdlogLgg16_corr*(lgg16_corr>=L_min_mid),np.log(lgg16_corr),axis=1)
 
 #dNdlogLgg16_corr/=np.log10(np.exp(1.))
 
@@ -523,10 +554,10 @@ for i in range(nt):
         logLbi = logLb - abs(np.random.normal(0.,dlogLbl,1)[0]) 
     dPdlogL[i] = 10**(a1i*(logL0-logLbi))
     dPdlogL[i][logL0>logLbi] = 10**(a2i*(logL0[logL0>logLbi]-logLbi))
-    dPdlogL[i] *= np.random.normal(4.6,1.8,1)[0]/np.trapz(dPdlogL[i],logL0)*np.log10(np.exp(1.))
+    dPdlogL[i] *= np.random.normal(4.6,1.8,1)[0]/np.trapezoid(dPdlogL[i],logL0)*np.log10(np.exp(1.))
 
 
-R0_50_wp15 = np.trapz(dPdlogL*(logL0>=50.),logL0/np.log10(np.exp(1.)),axis=1)
+R0_50_wp15 = np.trapezoid(dPdlogL*(logL0>=50.),logL0/np.log10(np.exp(1.)),axis=1)
 
 plt.fill_between(10**logL0,np.percentile(dPdlogL,5.,axis=0),np.percentile(dPdlogL,95.,axis=0),facecolor='#1E90FF',edgecolor='b',alpha=0.15)
 plt.plot(10**logL0,np.percentile(dPdlogL,50.,axis=0),'-',color='b',lw=1.5,label='W15')
@@ -583,35 +614,49 @@ plt.title(r'$L_\mathrm{min}=10^{50}\,\mathrm{erg/s}$')
 
 dN_dVdt *= (R0_50/R0).reshape([N,1])
 
-plt.fill_between(z,np.percentile(dN_dVdt,5.,axis=0),np.percentile(dN_dVdt,95.,axis=0),edgecolor='r',facecolor='pink',alpha=0.5)
-plt.plot(z,np.percentile(dN_dVdt,50.,axis=0),'-r',lw=3,label=label_chain_1,zorder=3)
+dN_dVdt_m = np.percentile(dN_dVdt,50.,axis=0)
+dN_dVdt_u = np.percentile(dN_dVdt,95.,axis=0)
+dN_dVdt_l = np.percentile(dN_dVdt,5.,axis=0)
+
+np.save('cache/curves_for_plots/dN_dVdt/'+chain[:-5]+'.npy',(z, dN_dVdt_m, dN_dVdt_u, dN_dVdt_l))
+
+plt.fill_between(z,dN_dVdt_l,dN_dVdt_u,edgecolor='r',facecolor='pink',alpha=0.5)
+plt.plot(z,dN_dVdt_m,'-r',lw=3,label=label_chain_1,zorder=3)
 
 if chain2 is not None:
     dN_dVdt2 *= (R02_50/R02).reshape([N2,1])
+
+    dN_dVdt2_m = np.percentile(dN_dVdt2,50.,axis=0)
+    dN_dVdt2_u = np.percentile(dN_dVdt2,95.,axis=0)
+    dN_dVdt2_l = np.percentile(dN_dVdt2,5.,axis=0)
     
-    plt.fill_between(z,np.percentile(dN_dVdt2,16.,axis=0),np.percentile(dN_dVdt2,84.,axis=0),edgecolor='orange',facecolor='#FFD8C0',alpha=0.5,ls='--')
-    plt.plot(z,np.percentile(dN_dVdt2,50.,axis=0),ls='--',color='orange',lw=1.5,label=label_chain_2,zorder=10)
+    np.save('cache/curves_for_plots/dN_dVdt/'+chain2[:-5]+'.npy',(z, dN_dVdt2_m, dN_dVdt2_u, dN_dVdt2_l))
+    
+    plt.fill_between(z,dN_dVdt2_l,dN_dVdt2_u,edgecolor='orange',facecolor='#FFD8C0',alpha=0.5,ls='--')
+    plt.plot(z,dN_dVdt2_m,ls='--',color='orange',lw=1.5,label=label_chain_2,zorder=10)
 
 #plt.plot(1.+z,dN_dVdt.T[:,:100],color='grey',lw=0.5,alpha=0.5)
 
-## G16
-p1,p2,p3 = np.loadtxt('grb_data/density_lmin_11SW.clean.txt',usecols=(9,10,11),unpack=True)
-R0_g16 = np.trapz(dNdlogLgg16_corr,np.log(lgg16_corr),axis=1)
-dN_dVdt_g16 = np.zeros([N,len(z)])
-for i in range(N):
-    dN_dVdt_g16[i] = R0_50_g16[i]*psi_g16(z,p1[i],p2[i],p3[i])
+# ########## 
+# ## G16
+# p1,p2,p3 = np.loadtxt('grb_data/density_lmin_11SW.clean.txt',usecols=(9,10,11),unpack=True)
+# R0_g16 = np.trapezoid(dNdlogLgg16_corr,np.log(lgg16_corr),axis=1)
+# dN_dVdt_g16 = np.zeros([N,len(z)])
+# for i in range(np.min(N,10000)):
+#     dN_dVdt_g16[i] = R0_50_g16[i]*psi_g16(z,p1[i],p2[i],p3[i])
 
-plt.fill_between(z,np.percentile(dN_dVdt_g16,16.,axis=0),np.percentile(dN_dVdt_g16,84.,axis=0),edgecolor='k',facecolor='grey',alpha=0.2)
-plt.plot(z,np.percentile(dN_dVdt_g16,50.,axis=0),'-',lw=1.5,color='grey',label='G16')
+# plt.fill_between(z,np.percentile(dN_dVdt_g16,16.,axis=0),np.percentile(dN_dVdt_g16,84.,axis=0),edgecolor='k',facecolor='grey',alpha=0.2)
+# plt.plot(z,np.percentile(dN_dVdt_g16,50.,axis=0),'-',lw=1.5,color='grey',label='G16')
 
-R0_wp15 = np.random.normal(4.1,2.,N)
-dN_dVdt_wp15 = np.zeros([N,len(z)])
-for i in range(N):
-    dN_dVdt_wp15[i] = R0_50_wp15[i]*psi_wp15(z)
+########## OUT OF BOUND FOR N>1000
+# R0_wp15 = np.random.normal(4.1,2.,N)
+# dN_dVdt_wp15 = np.zeros([N,len(z)])
+# for i in range(N):
+#     dN_dVdt_wp15[i] = R0_50_wp15[i]*psi_wp15(z)
 
 
-plt.fill_between(z,np.percentile(dN_dVdt_wp15,16.,axis=0),np.percentile(dN_dVdt_wp15,84.,axis=0),edgecolor='b',facecolor='#1E90FF',alpha=0.2)
-plt.plot(z,np.percentile(dN_dVdt_wp15,50.,axis=0),'-',lw=1.5,color='b',label='W15')
+# plt.fill_between(z,np.percentile(dN_dVdt_wp15,16.,axis=0),np.percentile(dN_dVdt_wp15,84.,axis=0),edgecolor='b',facecolor='#1E90FF',alpha=0.2)
+# plt.plot(z,np.percentile(dN_dVdt_wp15,50.,axis=0),'-',lw=1.5,color='b',label='W15')
 
 
 plt.tick_params(which='both',direction='in',top=True,right=True)
@@ -928,3 +973,7 @@ plt.ylim(0.,3.3)
 plt.tick_params(which='both',direction='in',top=True,left=False,labelleft=False,labelsize=8)
 
 plt.savefig('figures/Yonetoku_plane{0}.pdf'.format(suffix),bbox_inches='tight')
+
+
+print('\n Mission Passed')
+print(' Respect +')

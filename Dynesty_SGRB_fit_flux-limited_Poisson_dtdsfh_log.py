@@ -14,8 +14,8 @@ p50300 = sgrb['pflx_comp_phtfluxb'].values
 ep = sgrb['pflx_comp_epeak'].values
 
 # impose a low flux cut to see the the effect of wrong treatment of selection effects
-p_gbm_lim = 2.37
-p_swift_lim = 2.5
+p_gbm_lim = 3.5
+p_swift_lim = 3.5
 clean = (ep>50.) & (ep<1e4) & (p50300>p_gbm_lim) 
 
 ep = ep[clean]
@@ -138,14 +138,18 @@ def ptform(u):
     # 'y':x[10], theta_pop['y']<-3., theta_pop['y']>3. 
     x[10] = u[10]*6. - 3 # scale and shift to [-3, 3]
 
-    # 'tdmin':x[11], theta_pop['tdmin']<0.01, theta_pop['tdmin']>3.
-    x[11] = u[11]*(3.-0.01) + 0.01 # scale and shift to [0.01, 3]
+    # LOG PRIOR VERSION
+    # # 'mu_td':x[11], theta_pop['mu_td']<0.01, theta_pop['mu_td']>5.
+    x[11] = u[11]*np.log10(5/0.01) + np.log10(0.01)
+    # x[11] = u[11]*(5.-0.01) + 0.01 # scale and shift to [0.01, 5]
 
-    # 'at':x[12], theta_pop['at']<0., theta_pop['at']>3.
-    x[12] = u[12]*3. # scale [0, 3]
+    # LOG PRIOR VERSION
+    # # 'sigma_td':x[12], theta_pop['sigma_td']<0.01, theta_pop['sigma_td']>5.
+    x[12] = u[12]*np.log10(5/0.01) + np.log10(0.01)
+    # x[12] = u[12]*(5.-0.01) + 0.01 # scale and shift to [0.01, 5]
 
-    # 'R0':10**x[13], theta_pop['R0']<1., theta_pop['R0']>1e6:
-    x[13] = u[13]*6. # scale and shift to [log10(1.), log10(1e6)]
+    # 'R0':10**x[13], theta_pop['R0']<1., theta_pop['R0']>1e4:
+    x[13] = u[13]*4. # scale and shift to [log10(1.), log10(1e4)]
 
     return x
 
@@ -158,7 +162,7 @@ def loglike(x):
     # smooth double power law jet model
     theta_pop = {'jetmodel':'smooth double power law',
              'rho_z':'DTD*SFH',
-             'dtd':'pow',
+             'dtd':'lognorm',
              'thc':10**x[0],
              'Lc*':10.**x[1],
              'a_L':x[2],
@@ -170,20 +174,14 @@ def loglike(x):
              'A':x[8],
              's_c':10.**x[9],
              'y':x[10],
-             'tdmin':x[11],
-             'at':x[12],
+             'mu_td':10**x[11],
+             'sigma_td':10**x[12],
              'R0':10**x[13]
              }
     
     pi_EpLz = lambda Epx,Lx,zx:Lx**-1*(1.+zx)**-1 # Ep,L,z prior from spectral analysis
     pdet = lambda pf,ep: (pf>p_gbm_lim)*(ep<1e4)*(ep>50.) # detection probability for flux-limited sample analysis
-    
-    # evaluate log prior
-    lpr = logprior(theta_pop)
-    
-    if not np.isfinite(lpr):
-        return -np.inf
-    
+
     # evaluate log likelihood
 
     ## observer frame sample
@@ -213,17 +211,23 @@ if __name__=='__main__':
     
     nthreads = 8
     ndim = 14
+    nlive = 100*ndim
+    nbatch = 20*ndim
     N_effective_sample = 20000
-    checkpoint_filename = 'nested_samplings/Dynesty_SGRB_flux-limited-sample-analysis_WRONGCUT_Poisson_dtdsfh_pow.save'
+    dlogz = 0.001
+    # checkpoint_filename = f'nested_samplings/draft_nested_JET_flux-limited_Poisson_dtdsfh_LOG_dlogz{dlogz}_nlive{nlive}_nbatch{nbatch}_neff{N_effective_sample}.save' # Linear DTD params
+    checkpoint_filename = f'nested_samplings/final_nested_JET_flux-limited_Poisson_dtdsfh_LOG_dlogz{dlogz}_nlive{nlive}_nbatch{nbatch}_neff{N_effective_sample}.save' # Log DTD params
     
     print('Starting dynamic nested sampling...')
     # initialize the sampler
     with dypool.Pool(nthreads, loglike=loglike, prior_transform=ptform) as pool:
         if os.path.exists(checkpoint_filename):
             dsampler = DynamicNestedSampler.restore(checkpoint_filename, pool=pool)
-            dsampler.run_nested(resume=True, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename, dlogz_init=0.01, nlive_init=500, nlive_batch=100)
+            # dsampler.run_nested(resume=True, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename, dlogz_init=dlogz, nlive_init=nlive, nlive_batch=nbatch, wt_kwargs={'pfrac': 1.0}) # 100/0 post/evid
+            dsampler.run_nested(resume=True, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename, dlogz_init=dlogz, nlive_init=nlive, nlive_batch=nbatch) # 80/20 post/evid
         else:
             dsampler = DynamicNestedSampler(pool.loglike, pool.prior_transform, ndim, pool=pool)
-            dsampler.run_nested(use_stop=True, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename, dlogz_init=0.01, nlive_init=500, nlive_batch=100)
+            # dsampler.run_nested(use_stop=True, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename, dlogz_init=dlogz, nlive_init=nlive, nlive_batch=nbatch, wt_kwargs={'pfrac': 1.0}) # 100/0 post/evid
+            dsampler.run_nested(use_stop=True, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename, dlogz_init=dlogz, nlive_init=nlive, nlive_batch=nbatch) # 80/20 post/evid
 
     print('')

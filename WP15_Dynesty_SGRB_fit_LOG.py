@@ -75,6 +75,9 @@ zobs = bat['z'].values
 # set alpha index for Band function
 alpha = -0.5
 
+# WP15's effective full sky observing time of Fermi
+T_WP15 = 3.65
+
 def ptform(u):
     """Transforms the uniform random variables `u ~ Unif[0., 1.)`
     to the parameters of interest."""
@@ -93,10 +96,15 @@ def ptform(u):
     x[2] = u[2]*4. + 50. # scale and shift to [log10(1e50), log10(1e54)]
 
     # 'mu_td':x[3], theta_pop['mu_td']<0.01, theta_pop['mu_td']>5.
-    x[3] = u[3]*(5.-0.01) + 0.01 # scale and shift to [0.01, 5]
+    x[3] = u[3]*np.log10(5./0.01) + np.log10(0.01) # scale and shift to [0.01, 5]
+    # x[3] = u[3]*(5.-0.01) + 0.01 # scale and shift to [0.01, 5]
 
     # 'sigma_td':x[4], theta_pop['sigma_td']<0.01, theta_pop['sigma_td']>5.
-    x[4] = u[4]*(5.-0.01) + 0.01 # scale and shift to [0.01, 5]
+    x[4] = u[4]*np.log10(5./0.01) + np.log10(0.01) # scale and shift to [0.01, 5]
+    # x[4] = u[4]*(5.-0.01) + 0.01 # scale and shift to [0.01, 5]
+
+    # 'R0':10**x[5], theta_pop['R0']<1., theta_pop['R0']>1e4
+    x[5] = u[5]*4. # scale and shift to [log10(1.), log10(1e4)]
     
     return x
     
@@ -107,6 +115,18 @@ def loglike(x):
     """
 
     # broken power law luminosity function
+    # theta_pop = {'rho_z':'DTD*SFH',
+    #          'dtd':'lognorm',
+    #          'alpha_L':x[0],
+    #          'beta_L':x[1],
+    #          'gamma_L':x[0],
+    #          'L_*':10.**x[2],
+    #          'L_**':6e49,
+    #          'L_0':5e49,
+    #          'mu_td':x[3],
+    #          'sigma_td':x[4],
+    #          'R0':10**x[5]
+    #          }
     theta_pop = {'rho_z':'DTD*SFH',
              'dtd':'lognorm',
              'alpha_L':x[0],
@@ -115,8 +135,9 @@ def loglike(x):
              'L_*':10.**x[2],
              'L_**':6e49,
              'L_0':5e49,
-             'mu_td':x[3],
-             'sigma_td':x[4]
+             'mu_td':10**x[3],
+             'sigma_td':10**x[4],
+             'R0':10**x[5]
              }
     
     pi_Lz = lambda Lx,zx:Lx**-1 # L,z prior from spectral analysis
@@ -126,7 +147,7 @@ def loglike(x):
     # evaluate log likelihood
         
     ## Fermi/GBM sample
-    logl_obsframe_fermi = grbpop.Ppop.obsframe_loglikelihood_lum2breaks_NO_EP(pf=p50300_gbm,epbias=ep_bias,alpha=alpha,specmodel='Band',inst='Fermi',theta_pop=theta_pop,res=100,pdet=pdet_gbm,pflim=p_gbm_lim,return_logalpha=False)
+    logl_obsframe_fermi, log_alpha_obsframe = grbpop.Ppop.obsframe_loglikelihood_lum2breaks_NO_EP(pf=p50300_gbm,epbias=ep_bias,alpha=alpha,specmodel='Band',inst='Fermi',theta_pop=theta_pop,res=100,pdet=pdet_gbm,pflim=p_gbm_lim,return_logalpha=True)
     
     ## CGRO/BATSE sample
     logl_obsframe_batse = grbpop.Ppop.obsframe_loglikelihood_lum2breaks_NO_EP(pf=p50300_batse,epbias=ep_bias,alpha=alpha,specmodel='Band',inst='Fermi',theta_pop=theta_pop,res=100,pdet=pdet_batse,pflim=p_batse_lim,return_logalpha=False)
@@ -134,9 +155,11 @@ def loglike(x):
     ## Swift/BAT sample
     logl_restframe = grbpop.Ppop.restframe_loglikelihood_lum2breaks_NO_EP(Lobs=Lsamples,zobs=zobs,epbias=ep_bias,alpha=alpha,inst='Swift',theta_pop=theta_pop,specmodel='Band',pdet=None,pflim=p_swift_lim,prior_Lz=pi_Lz,logalpha=None,res=100)
 
+    log_poisson_obsframe = grbpop.Ppop.log_poissonian_observer_lum_2breaks(theta_pop,N_obs=len(p50300_gbm),eta=1.,T=T_WP15,logalpha=log_alpha_obsframe,alpha=alpha,specmodel='Band',inst='Fermi',res=100,pdet=pdet_gbm,pflim=None)
+
     # print(logl_obsframe_fermi, logl_obsframe_batse, logl_restframe)
     ## sum all contributions
-    logl = logl_obsframe_fermi + logl_obsframe_batse + logl_restframe
+    logl = logl_obsframe_fermi + logl_obsframe_batse + logl_restframe + log_poisson_obsframe
     
     if np.isfinite(logl):
         return logl
@@ -149,21 +172,28 @@ if __name__=='__main__':
     from dynesty import pool as dypool
     
     nthreads = 8
-    ndim = 5
+    # ndim = 5
+    ndim = 6
     nlive = 100*ndim
+    nbatch = 20*ndim
     dlogz = 0.001
     N_effective_sample = 20000
-    checkpoint_filename = 'nested_samplings/WP15_Dynesty_SGRB_fit_LOG_extended.001.save'
+    sampling = 'rwalk'
+    # checkpoint_filename = 'nested_samplings/wp15_new_Dynesty_Poisson_SGRB_fit_LOG_extended.001.save'
+    # checkpoint_filename = 'nested_samplings/wp15_new_Dynesty_Poisson_SGRB_fit_LOG_reduced.001.save'
+    checkpoint_filename = 'nested_samplings/wp15_new_UIL_Dynesty_Poisson_SGRB_fit_LOG_extended.001.save'
+    # checkpoint_filename = 'nested_samplings/wp15_new_UIL_Dynesty_Poisson_SGRB_fit_LOG_reduced.001.save'
     
     print('Starting dynamic nested sampling...')
     # initialize the sampler
     with dypool.Pool(nthreads, loglike=loglike, prior_transform=ptform) as pool:
         if os.path.exists(checkpoint_filename):
-            dsampler = DynamicNestedSampler.restore(checkpoint_filename, pool=pool, sample='rslice')
-            dsampler.run_nested(resume=True, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename, dlogz_init=dlogz, nlive_init=nlive, nlive_batch=100)
+            dsampler = DynamicNestedSampler.restore(checkpoint_filename, pool=pool)
+            # dsampler = DynamicNestedSampler.restore(checkpoint_filename, pool=pool, sample='rslice')
+            dsampler.run_nested(resume=True, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename, dlogz_init=dlogz, nlive_init=nlive, nlive_batch=nbatch)
         else:
-            dsampler = DynamicNestedSampler(pool.loglike, pool.prior_transform, ndim, pool=pool, sample='rslice')
-            dsampler.run_nested(use_stop=True, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename, dlogz_init=dlogz, nlive_init=nlive, nlive_batch=100)
+            dsampler = DynamicNestedSampler(pool.loglike, pool.prior_transform, ndim, pool=pool, sample=sampling)
+            dsampler.run_nested(use_stop=True, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename, dlogz_init=dlogz, nlive_init=nlive, nlive_batch=nbatch)
 
     print('')
     

@@ -114,7 +114,7 @@ def ptform(u):
     x[2] = u[2]*6. # scale to [0, 6] 
     
     # 'b_L':x[3], theta_pop['b_L']<-3., theta_pop['b_L']>6.
-    x[3] = u[3]*9. - 3 # scale and shift to [-3, 9]
+    x[3] = u[3]*9. - 3 # scale and shift to [-3, 6]
 
     # 'Epc*':10.**x[4], theta_pop['Epc*']<1e2, theta_pop['Epc*']>1e5 
     x[4] = u[4]*np.log10(1e5/1e2) + np.log10(1e2) # scale and shift to [log10(1e2), log10(1e5)] 
@@ -123,7 +123,7 @@ def ptform(u):
     x[5] = u[5]*6. # scale to [0, 6]
     
     # 'b_Ep':x[6], theta_pop['b_Ep']<-3., theta_pop['b_Ep']>6.
-    x[6] = u[6]*9. - 3 # scale and shift to [-3, 9]
+    x[6] = u[6]*9. - 3 # scale and shift to [-3, 6]
 
     # 'thw':10.**x[7], theta_pop['thw']<theta_pop['thc'], theta_pop['thw']>np.pi/2.
     thw_prior = log_iso_angle_prior(10**x[0],np.pi/2.)
@@ -133,22 +133,23 @@ def ptform(u):
     x[8] = u[8]*3.5 + 1.5 # scale and shift to [1.5, 5]
 
     # 's_c':10.**x[9], theta_pop['s_c']<0.3, theta_pop['s_c']>3.
-    x[9] = u[9]*np.log10(3/0.3) + np.log10(0.3) # scale and shift to [log10(0.3), log10(3)]
+    x[9] = u[9]*np.log10(3./0.3) + np.log10(0.3) # scale and shift to [log10(0.3), log10(3)]
 
     # 'y':x[10], theta_pop['y']<-3., theta_pop['y']>3. 
     x[10] = u[10]*6. - 3 # scale and shift to [-3, 3]
 
-    # 'a':x[11], theta_pop['a']<-1., theta_pop['a']>5. 
-    x[11] = u[11]*6. - 1 # scale and shift to [-1, 5]
+    # LOG PRIOR VERSION
+    # # 'tdmin':x[11], theta_pop['tdmin']<0.01, theta_pop['tdmin']>3.
+    x[11] = u[11]*np.log10(3./0.005) + np.log10(0.005) # 5 Myr minimum time delay for a NS to form in a binary
+    # x[11] = u[11]*(3.-0.01) + 0.01 # scale and shift to [0.01, 3]
 
-    # 'b':x[12], theta_pop['b']<1., theta_pop['b']>10. 
-    x[12] = u[12]*9. + 1 # scale and shift to [1, 10]
+    # 'at':x[12], theta_pop['at']<0., theta_pop['at']>5.
+    x[12] = u[12]*5. # scale [0, 5] 
 
-    # 'zp':x[13], theta_pop['zp']<0.1, theta_pop['zp']>3.
-    x[13] = u[13]*(2.9) + 0.1 # scale and shift to [0.1, 3]
+    # 'R0':10**x[13], theta_pop['R0']<1., theta_pop['R0']>1e4:
+    x[13] = u[13]*4. # scale and shift to [log10(1.), log10(1e4)]
 
-    # 'R0':10**x[14], theta_pop['R0']<1., theta_pop['R0']>1e6:
-    x[14] = u[14]*6. # scale and shift to [log10(1.), log10(1e6)]
+    return x
 
 
 def loglike(x):
@@ -158,7 +159,8 @@ def loglike(x):
     
     # smooth double power law jet model
     theta_pop = {'jetmodel':'smooth double power law',
-             'rho_z':'SBPL',
+             'rho_z':'DTD*SFH',
+             'dtd':'pow',
              'thc':10**x[0],
              'Lc*':10.**x[1],
              'a_L':x[2],
@@ -170,20 +172,13 @@ def loglike(x):
              'A':x[8],
              's_c':10.**x[9],
              'y':x[10],
-             'a':x[11],
-             'b':x[12],
-             'zp':x[13],
-             'R0':10**x[14]
+             'tdmin':10**x[11],
+             'at':x[12],
+             'R0':10**x[13]
              }
     
     pi_EpLz = lambda Epx,Lx,zx:Lx**-1*(1.+zx)**-1 # Ep,L,z prior from spectral analysis
     pdet = lambda pf,ep: (pf>p_gbm_lim)*(ep<1e4)*(ep>50.) # detection probability for flux-limited sample analysis
-    
-    # evaluate log prior
-    lpr = logprior(theta_pop)
-    
-    if not np.isfinite(lpr):
-        return -np.inf
     
     # evaluate log likelihood
 
@@ -213,18 +208,24 @@ if __name__=='__main__':
     from dynesty import pool as dypool
     
     nthreads = 8
-    ndim = 15
-    N_effective_sample = 20000
-    checkpoint_filename = 'nested_samplings/Dynesty_SGRB_flux-limited-sample-analysis_Poisson.save'
+    ndim = 14
+    nlive = 100*ndim
+    nbatch = 20*ndim
+    N_effective_sample = 20000 #paper
+    dlogz = 0.001
+    # checkpoint_filename = f'nested_samplings/draft_nested_JET_flux-limited_Poisson_dtdsfh_POW_dlogz{dlogz}_nlive{nlive}_nbatch{nbatch}_neff{N_effective_sample}.save' # Linear DTD params
+    checkpoint_filename = f'nested_samplings/final_nested_JET_flux-limited_Poisson_dtdsfh_POW_dlogz{dlogz}_nlive{nlive}_nbatch{nbatch}_neff{N_effective_sample}.save' # Log DTD params
     
     print('Starting dynamic nested sampling...')
     # initialize the sampler
     with dypool.Pool(nthreads, loglike=loglike, prior_transform=ptform) as pool:
         if os.path.exists(checkpoint_filename):
             dsampler = DynamicNestedSampler.restore(checkpoint_filename, pool=pool)
-            dsampler.run_nested(resume=True, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename, dlogz_init=0.01, nlive_init=500, nlive_batch=100)
+            # dsampler.run_nested(resume=True, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename, dlogz_init=dlogz, nlive_init=nlive, nlive_batch=nbatch, wt_kwargs={'pfrac': 1.0}) # 100/0 post/evid
+            dsampler.run_nested(resume=True, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename, dlogz_init=dlogz, nlive_init=nlive, nlive_batch=nbatch) # 80/20 post/evid
         else:
             dsampler = DynamicNestedSampler(pool.loglike, pool.prior_transform, ndim, pool=pool)
-            dsampler.run_nested(use_stop=True, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename, dlogz_init=0.01, nlive_init=500, nlive_batch=100)
+            # dsampler.run_nested(use_stop=True, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename, dlogz_init=dlogz, nlive_init=nlive, nlive_batch=nbatch, wt_kwargs={'pfrac': 1.0}) # 100/0 post/evid
+            dsampler.run_nested(use_stop=True, n_effective=N_effective_sample, checkpoint_file=checkpoint_filename, dlogz_init=dlogz, nlive_init=nlive, nlive_batch=nbatch) # 80/20 post/evid
 
     print('')
